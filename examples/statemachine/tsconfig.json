@@ -1,4 +1,3 @@
-// this file is required for VSCode to work properly
 {
   "extends": "./tsconfig.src.json",
   "compilerOptions": {
