@@ -7,12 +7,13 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { type Generated, expandToNode as toNode, joinToNode as join, toString } from 'langium/generate';
-import type { State, Statemachine } from '../language-server/generated/ast.js';
+import { Expr, isBinExpr, isGroup, isLit, isNegExpr, isRef, type Attribute, type State, type Statemachine } from '../language-server/generated/ast.js';
 import { extractDestinationAndName } from './cli-util.js';
 
 // For precise white space handling in generation template
 // we suggest you to enable the display of white space characters in your editor.
 // In VS Code execute the 'Toggle Render Whitespace' command, for example.
+type StatemachineEnv = Map<string, number>;
 
 export function generateCpp(statemachine: Statemachine, filePath: string, destination: string | undefined): string {
     const data = extractDestinationAndName(filePath, destination);
@@ -97,16 +98,24 @@ function generateStateClass(ctx: GeneratorContext): Generated {
 }
 
 function generateStatemachineClass(ctx: GeneratorContext): Generated {
+    const env: StatemachineEnv = new Map();
+
     return toNode`
         class ${ctx.statemachine.name} {
         private:
             State* state = nullptr;
-
+            ${joinWithExtraNL(ctx.statemachine.attributes, attribute => toNode`
+                ${generateAttributeDeclaration(attribute)}
+            `)}
         public:
             ${ctx.statemachine.name}(State* initial_state) {
                 initial_state->set_context(this);
                 state = initial_state;
-                std::cout << "[" << state->get_name() << "]" << std::endl;
+                std::cout << "[op" << state->get_name() << "]" << std::endl;
+                ${joinWithExtraNL(ctx.statemachine.attributes, attribute => toNode`
+                    ${generateAttributeInitialization(attribute, env)}
+                    std::cout << "${attribute.name}: " << ${attribute.defaultValue} << std::endl;
+                `)}
             }
 
             ~${ctx.statemachine.name}() {
@@ -157,6 +166,174 @@ function generateStateDefinition(ctx: GeneratorContext, state: State): Generated
         `)}
     `;
 }
+
+function evalExprWithEnv(e: Expr, env: StatemachineEnv): number {//
+    if (isLit(e)) {
+        return e.val;
+
+    } else if (isRef(e)) {
+        const v = env.get(e.val.ref?.name ?? '');
+        if (v !== undefined) {
+            return v;
+        }
+        throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${e.val.$refText}' in the env.`);
+
+    } else if (isBinExpr(e)) {
+        let opval = e.op;
+        let v1 = evalExprWithEnv(e.e1, env);
+        let v2 = evalExprWithEnv(e.e2, env);
+
+        switch (opval) {
+            case '+': return v1 + v2;
+            case '-': return v1 - v2;
+            case '*': return v1 * v2;
+            case '/': return v1 / v2;
+            default: throw new Error(`Unrecognized bin op passed: ${opval}`);
+        }
+
+    } else if (isNegExpr(e)) {
+        return -1 * evalExprWithEnv(e.ne, env);
+
+    } else if (isGroup(e)) {
+        return evalExprWithEnv(e.ge, env);
+
+    }
+
+    throw new Error('Unhandled Expression: ' + e);
+
+}
+function generateAttributeDeclaration(attribute: Attribute): Generated {
+    return toNode`
+        int ${attribute.name} = 0;
+    `;
+}
+
+function generateAttributeDefaultValue(attribute: Attribute): string {
+    if (attribute.defaultValue) {
+        const env: StatemachineEnv = new Map();
+        const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
+        return ` = ${defaultValue}`;
+    }
+    return '';
+}
+
+function generateAttributeInitialization(attribute: Attribute, env: StatemachineEnv): Generated {
+    if (attribute.defaultValue) {
+        const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
+        env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
+        return toNode`this->${attribute.name} = ${defaultValue};`;
+    }
+    return toNode`this->${attribute.name} = 0;`; // Set default value to 0
+}
+
+
+// if (attribute.defaultValue) {
+//     if (attribute.defaultValue) {
+//     const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
+//     env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
+//     return toNode`this->${attribute.name} = ${defaultValue};`;
+// }
+// return toNode`this->${attribute.name} = 0;`; // Set default value to 0
+//     const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
+//     env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
+//     return toNode`this->${attribute.name} = ${defaultValue};`;
+// }
+// return toNode``;
+// function generateAttributeDeclaration(attribute: Attribute): Generated {
+//     return toNode`
+//         int ${attribute.name}${generateAttributeDefaultValue(attribute)};
+//     `;
+// }
+
+// function generateAttributeDefaultValue(attribute: Attribute): string {
+//     if (typeof attribute.defaultValue != 'number') { // Check if it's a number
+//         attribute.defaultValue = undefined;
+//     }
+//     const defaultValue = attribute.defaultValue ? evalExprWithEnv(attribute.defaultValue, new Map()) : 0;
+//     return ` = ${defaultValue}`;
+// }
+
+// function generateAttributeInitialization(attribute: Attribute, env: StatemachineEnv): Generated {
+//     let defaultValue = 0; // Default value for integers
+
+//     if (attribute.defaultValue) {
+//         const evaluatedValue = evalExprWithEnv(attribute.defaultValue, env); // Evaluate the expression
+//         if (typeof evaluatedValue === 'number') { // Check if it's a number
+//             defaultValue = evaluatedValue;
+//         } else {
+//             console.warn(`Warning: Default value for attribute '${attribute.name}' is not an integer. Using default value of 0.`);
+//         }
+
+//         env.set(attribute.name, defaultValue);
+
+//         return toNode`
+//                 this->${attribute.name} = ${defaultValue};
+//                 std::cout << "${attribute.name}: " << this->${attribute.name} << std::endl;
+//             `;
+//     }
+
+//     // Store the default value in the environment if no default is provided
+//     env.set(attribute.name, defaultValue);
+//     return toNode``; // No initialization code needed if no default is provided
+// }
+//////////////////
+//         // Check if the evaluated value is a literal number
+//         if (isLit(attribute.defaultValue) && typeof evaluatedValue === 'number') {
+//             defaultValue = evaluatedValue;
+//         } else {
+//             console.warn(`Warning: Default value for attribute '${attribute.name}' is not a simple integer literal. Using default value of 0.`);
+//         }
+
+//         env.set(attribute.name, defaultValue);  // Update the environment
+
+//         return toNode`
+//             this->${attribute.name} = ${defaultValue};
+//             std::cout << "${attribute.name}: " << this->${attribute.name} << std::endl;
+//         `;
+//     }
+
+//     // Store the default value in the environment if no default is provided
+//     env.set(attribute.name, defaultValue);
+//     return toNode``; // No initialization code needed if no default is provided
+// }
+//     let defaultValue = 0;
+
+//     if (attribute.defaultValue) {
+//         const evaluatedValue = evalExprWithEnv(attribute.defaultValue, env);
+
+//         if (typeof evaluatedValue === 'number') { // Check if it's a number
+//             defaultValue = evaluatedValue;
+//         } else {
+//             console.warn(`Warning: Default value for attribute '${attribute.name}' is not an integer. Using default value of 0.`);
+//         }
+
+//         env.set(attribute.name, defaultValue);
+
+//         return toNode`
+//                 this->${attribute.name} = ${defaultValue};
+//                 std::cout << "${attribute.name}: " << this->${attribute.name} << std::endl;
+//             `;
+//     }
+
+//     // Store the default value in the environment if no default is provided
+//     env.set(attribute.name, defaultValue);
+//     return toNode``; // No initialization code needed if no default is provided
+// }
+
+
+//     if (typeof attribute.defaultValue == "number") {
+//         const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
+//         env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
+//         return toNode`
+//             this->${attribute.name} = ${defaultValue};
+//             std::cout << "${attribute.name}: " << this->${attribute.defaultValue} << std::endl;
+//         `;
+//     }
+//     else {
+//         env.set(attribute.name, zeroDefaultValue);  // Store the evaluated value in the environment
+//     }
+//     return toNode``;
+// }
 
 function generateMain(ctx: GeneratorContext): Generated {
     return toNode`

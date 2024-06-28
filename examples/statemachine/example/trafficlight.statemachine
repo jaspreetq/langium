@@ -4,6 +4,9 @@ events
     switchCapacity
     next
 
+attributes 
+    cnt = (12 + 2*20) - 23
+    u = 1
 initialState PowerOff
 
 state PowerOff

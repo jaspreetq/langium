@@ -1,16 +1,17 @@
 // Monarch syntax highlighting for the statemachine language.
 export default {
     keywords: [
-        'actions','commands','end','events','initialState','state','statemachine'
+        'actions','attributes','commands','end','events','initialState','print','state','statemachine','when','with'
     ],
     operators: [
-        '=>'
+        '*','+','-','/','=','=>'
     ],
-    symbols: /=>|\{|\}/,
+    symbols: /\(|\)|\*|\+|-|\/|=|=>|\{|\}/,
 
     tokenizer: {
         initial: [
             { regex: /[_a-zA-Z][\w_]*/, action: { cases: { '@keywords': {"token":"keyword"}, '@default': {"token":"ID"} }} },
+            { regex: /[0-9]+(\.[0-9]*)?/, action: {"token":"number"} },
             { include: '@whitespace' },
             { regex: /@symbols/, action: { cases: { '@operators': {"token":"operator"}, '@default': {"token":""} }} },
         ],

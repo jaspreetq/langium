@@ -5,7 +5,7 @@
  ******************************************************************************/
 
 import type { ValidationAcceptor, ValidationChecks } from 'langium';
-import type { State, Statemachine, StatemachineAstType, Event } from './generated/ast.js';
+import type { State, Statemachine, StatemachineAstType, Event, Attribute } from './generated/ast.js';
 import type { StatemachineServices } from './statemachine-module.js';
 import { MultiMap } from 'langium';
 
@@ -14,7 +14,7 @@ export function registerValidationChecks(services: StatemachineServices) {
     const validator = services.validation.StatemachineValidator;
     const checks: ValidationChecks<StatemachineAstType> = {
         State: validator.checkStateNameStartsWithCapital,
-        Statemachine: validator.checkUniqueStatesAndEvents
+        Statemachine: validator.checkUniqueStatesEventsAndAttributes
     };
     registry.register(checks, validator);
 }
@@ -39,12 +39,14 @@ export class StatemachineValidator {
      * @param statemachine the statemachine to check
      * @param accept the acceptor to report errors
      */
-    checkUniqueStatesAndEvents(statemachine: Statemachine, accept: ValidationAcceptor): void {
+    checkUniqueStatesEventsAndAttributes(statemachine: Statemachine, accept: ValidationAcceptor): void {
         // check for duplicate state and event names and add them to the map
-        const names = new MultiMap<string, State | Event>();
-        const allSymbols = [...statemachine.states, ...statemachine.events];
+        const names = new MultiMap<string, State | Event | Attribute>();
+        const allSymbols = [...statemachine.states, ...statemachine.events, ...statemachine.attributes];
         for (const symbol of allSymbols) {
-            names.add(symbol.name, symbol);
+            if (symbol.name) {
+                names.add(symbol.name, symbol);
+            }
         }
         for (const [name, symbols] of names.entriesGroupedByKey()) {
             if (symbols.length > 1) {

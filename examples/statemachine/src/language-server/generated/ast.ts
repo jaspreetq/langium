@@ -10,9 +10,79 @@ import { AbstractAstReflection } from 'langium';
 export const StatemachineTerminals = {
     WS: /\s+/,
     ID: /[_a-zA-Z][\w_]*/,
+    NUMBER: /[0-9]+(\.[0-9]*)?/,
     ML_COMMENT: /\/\*[\s\S]*?\*\//,
     SL_COMMENT: /\/\/[^\n\r]*/,
 };
+
+export type Expr = BinExpr | PrimExpr;
+
+export const Expr = 'Expr';
+
+export function isExpr(item: unknown): item is Expr {
+    return reflection.isInstance(item, Expr);
+}
+
+export type PrimExpr = Group | Lit | NegExpr | Ref;
+
+export const PrimExpr = 'PrimExpr';
+
+export function isPrimExpr(item: unknown): item is PrimExpr {
+    return reflection.isInstance(item, PrimExpr);
+}
+
+export interface Action extends AstNode {
+    readonly $container: Transition;
+    readonly $type: 'Action';
+    assignment?: Assignment;
+    print?: PrintStatement;
+}
+
+export const Action = 'Action';
+
+export function isAction(item: unknown): item is Action {
+    return reflection.isInstance(item, Action);
+}
+
+export interface Assignment extends AstNode {
+    readonly $container: Action;
+    readonly $type: 'Assignment';
+    expression: Expr;
+    variable: Reference<Attribute>;
+}
+
+export const Assignment = 'Assignment';
+
+export function isAssignment(item: unknown): item is Assignment {
+    return reflection.isInstance(item, Assignment);
+}
+
+export interface Attribute extends AstNode {
+    readonly $container: Statemachine;
+    readonly $type: 'Attribute';
+    defaultValue?: Expr;
+    name: string;
+}
+
+export const Attribute = 'Attribute';
+
+export function isAttribute(item: unknown): item is Attribute {
+    return reflection.isInstance(item, Attribute);
+}
+
+export interface BinExpr extends AstNode {
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement;
+    readonly $type: 'BinExpr';
+    e1: Expr | PrimExpr;
+    e2: Expr | PrimExpr;
+    op: '*' | '+' | '-' | '/';
+}
+
+export const BinExpr = 'BinExpr';
+
+export function isBinExpr(item: unknown): item is BinExpr {
+    return reflection.isInstance(item, BinExpr);
+}
 
 export interface Command extends AstNode {
     readonly $container: Statemachine;
@@ -38,6 +108,78 @@ export function isEvent(item: unknown): item is Event {
     return reflection.isInstance(item, Event);
 }
 
+export interface Group extends AstNode {
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement;
+    readonly $type: 'Group';
+    ge: Expr;
+}
+
+export const Group = 'Group';
+
+export function isGroup(item: unknown): item is Group {
+    return reflection.isInstance(item, Group);
+}
+
+export interface GuardCondition extends AstNode {
+    readonly $container: Transition;
+    readonly $type: 'GuardCondition';
+    expression: '(';
+}
+
+export const GuardCondition = 'GuardCondition';
+
+export function isGuardCondition(item: unknown): item is GuardCondition {
+    return reflection.isInstance(item, GuardCondition);
+}
+
+export interface Lit extends AstNode {
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement;
+    readonly $type: 'Lit';
+    val: number;
+}
+
+export const Lit = 'Lit';
+
+export function isLit(item: unknown): item is Lit {
+    return reflection.isInstance(item, Lit);
+}
+
+export interface NegExpr extends AstNode {
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement;
+    readonly $type: 'NegExpr';
+    ne: Expr;
+}
+
+export const NegExpr = 'NegExpr';
+
+export function isNegExpr(item: unknown): item is NegExpr {
+    return reflection.isInstance(item, NegExpr);
+}
+
+export interface PrintStatement extends AstNode {
+    readonly $container: Action;
+    readonly $type: 'PrintStatement';
+    value: Expr;
+}
+
+export const PrintStatement = 'PrintStatement';
+
+export function isPrintStatement(item: unknown): item is PrintStatement {
+    return reflection.isInstance(item, PrintStatement);
+}
+
+export interface Ref extends AstNode {
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement;
+    readonly $type: 'Ref';
+    val: Reference<Attribute>;
+}
+
+export const Ref = 'Ref';
+
+export function isRef(item: unknown): item is Ref {
+    return reflection.isInstance(item, Ref);
+}
+
 export interface State extends AstNode {
     readonly $container: Statemachine;
     readonly $type: 'State';
@@ -54,6 +196,7 @@ export function isState(item: unknown): item is State {
 
 export interface Statemachine extends AstNode {
     readonly $type: 'Statemachine';
+    attributes: Array<Attribute>;
     commands: Array<Command>;
     events: Array<Event>;
     init: Reference<State>;
@@ -70,7 +213,9 @@ export function isStatemachine(item: unknown): item is Statemachine {
 export interface Transition extends AstNode {
     readonly $container: State;
     readonly $type: 'Transition';
+    actions: Array<Action>;
     event: Reference<Event>;
+    guard?: GuardCondition;
     state: Reference<State>;
 }
 
@@ -81,8 +226,20 @@ export function isTransition(item: unknown): item is Transition {
 }
 
 export type StatemachineAstType = {
+    Action: Action
+    Assignment: Assignment
+    Attribute: Attribute
+    BinExpr: BinExpr
     Command: Command
     Event: Event
+    Expr: Expr
+    Group: Group
+    GuardCondition: GuardCondition
+    Lit: Lit
+    NegExpr: NegExpr
+    PrimExpr: PrimExpr
+    PrintStatement: PrintStatement
+    Ref: Ref
     State: State
     Statemachine: Statemachine
     Transition: Transition
@@ -91,11 +248,21 @@ export type StatemachineAstType = {
 export class StatemachineAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [Command, Event, State, Statemachine, Transition];
+        return [Action, Assignment, Attribute, BinExpr, Command, Event, Expr, Group, GuardCondition, Lit, NegExpr, PrimExpr, PrintStatement, Ref, State, Statemachine, Transition];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
         switch (subtype) {
+            case BinExpr:
+            case PrimExpr: {
+                return this.isSubtype(Expr, supertype);
+            }
+            case Group:
+            case Lit:
+            case NegExpr:
+            case Ref: {
+                return this.isSubtype(PrimExpr, supertype);
+            }
             default: {
                 return false;
             }
@@ -105,6 +272,10 @@ export class StatemachineAstReflection extends AbstractAstReflection {
     getReferenceType(refInfo: ReferenceInfo): string {
         const referenceId = `${refInfo.container.$type}:${refInfo.property}`;
         switch (referenceId) {
+            case 'Assignment:variable':
+            case 'Ref:val': {
+                return Attribute;
+            }
             case 'State:actions': {
                 return Command;
             }
@@ -123,6 +294,43 @@ export class StatemachineAstReflection extends AbstractAstReflection {
 
     getTypeMetaData(type: string): TypeMetaData {
         switch (type) {
+            case Action: {
+                return {
+                    name: Action,
+                    properties: [
+                        { name: 'assignment' },
+                        { name: 'print' }
+                    ]
+                };
+            }
+            case Assignment: {
+                return {
+                    name: Assignment,
+                    properties: [
+                        { name: 'expression' },
+                        { name: 'variable' }
+                    ]
+                };
+            }
+            case Attribute: {
+                return {
+                    name: Attribute,
+                    properties: [
+                        { name: 'defaultValue' },
+                        { name: 'name' }
+                    ]
+                };
+            }
+            case BinExpr: {
+                return {
+                    name: BinExpr,
+                    properties: [
+                        { name: 'e1' },
+                        { name: 'e2' },
+                        { name: 'op' }
+                    ]
+                };
+            }
             case Command: {
                 return {
                     name: Command,
@@ -136,6 +344,54 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                     name: Event,
                     properties: [
                         { name: 'name' }
+                    ]
+                };
+            }
+            case Group: {
+                return {
+                    name: Group,
+                    properties: [
+                        { name: 'ge' }
+                    ]
+                };
+            }
+            case GuardCondition: {
+                return {
+                    name: GuardCondition,
+                    properties: [
+                        { name: 'expression' }
+                    ]
+                };
+            }
+            case Lit: {
+                return {
+                    name: Lit,
+                    properties: [
+                        { name: 'val' }
+                    ]
+                };
+            }
+            case NegExpr: {
+                return {
+                    name: NegExpr,
+                    properties: [
+                        { name: 'ne' }
+                    ]
+                };
+            }
+            case PrintStatement: {
+                return {
+                    name: PrintStatement,
+                    properties: [
+                        { name: 'value' }
+                    ]
+                };
+            }
+            case Ref: {
+                return {
+                    name: Ref,
+                    properties: [
+                        { name: 'val' }
                     ]
                 };
             }
@@ -153,6 +409,7 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                 return {
                     name: Statemachine,
                     properties: [
+                        { name: 'attributes', defaultValue: [] },
                         { name: 'commands', defaultValue: [] },
                         { name: 'events', defaultValue: [] },
                         { name: 'init' },
@@ -165,7 +422,9 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                 return {
                     name: Transition,
                     properties: [
+                        { name: 'actions', defaultValue: [] },
                         { name: 'event' },
+                        { name: 'guard' },
                         { name: 'state' }
                     ]
                 };

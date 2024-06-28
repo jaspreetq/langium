@@ -32,12 +32,19 @@ public:
 class TrafficLight {
 private:
     State* state = nullptr;
-
+    int cnt = [object Object];
+    int u = [object Object];
 public:
     TrafficLight(State* initial_state) {
         initial_state->set_context(this);
         state = initial_state;
-        std::cout << "[" << state->get_name() << "]" << std::endl;
+        std::cout << "[op" << state->get_name() << "]" << std::endl;
+        this->cnt = 29;
+        std::cout << "cnt: " << this->[object Object] << std::endl;
+        std::cout << "cnt: " << this->[object Object] << std::endl;
+        this->u = 1;
+        std::cout << "u: " << this->[object Object] << std::endl;
+        std::cout << "u: " << this->[object Object] << std::endl;
     }
 
     ~TrafficLight() {
@@ -47,7 +54,7 @@ public:
     }
 
     void transition_to(State *new_state) {
-        std::cout << state->get_name() << " ===> " << new_state->get_name() << std::endl;
+        std::cout << state->get_name() << " ===> " << new_state->get_name() << cnt << std::endl;
         if (state != nullptr) {
             delete state;
         }
