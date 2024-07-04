@@ -7,7 +7,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { type Generated, expandToNode as toNode, joinToNode as join, toString } from 'langium/generate';
-import { Expr, isBinExpr, isGroup, isLit, isNegExpr, isRef, type Attribute, type State, type Statemachine } from '../language-server/generated/ast.js';
+import { Attribute, Expr, isBinExpr, isGroup, isLit, isNegExpr, isRef, type State, type Statemachine } from '../language-server/generated/ast.js';
 import { extractDestinationAndName } from './cli-util.js';
 
 // For precise white space handling in generation template
@@ -98,24 +98,16 @@ function generateStateClass(ctx: GeneratorContext): Generated {
 }
 
 function generateStatemachineClass(ctx: GeneratorContext): Generated {
-    const env: StatemachineEnv = new Map();
 
     return toNode`
         class ${ctx.statemachine.name} {
         private:
             State* state = nullptr;
-            ${joinWithExtraNL(ctx.statemachine.attributes, attribute => toNode`
-                ${generateAttributeDeclaration(attribute)}
-            `)}
         public:
             ${ctx.statemachine.name}(State* initial_state) {
                 initial_state->set_context(this);
                 state = initial_state;
-                std::cout << "[op" << state->get_name() << "]" << std::endl;
-                ${joinWithExtraNL(ctx.statemachine.attributes, attribute => toNode`
-                    ${generateAttributeInitialization(attribute, env)}
-                    std::cout << "${attribute.name}: " << ${attribute.defaultValue} << std::endl;
-                `)}
+                std::cout << "[op" << state->get_name() <<  "]" << std::endl;
             }
 
             ~${ctx.statemachine.name}() {
@@ -138,6 +130,7 @@ function generateStatemachineClass(ctx: GeneratorContext): Generated {
                     state->${event.name}();
                 }
         `)}
+
         };
     `;
 }
@@ -202,28 +195,38 @@ function evalExprWithEnv(e: Expr, env: StatemachineEnv): number {//
     throw new Error('Unhandled Expression: ' + e);
 
 }
-function generateAttributeDeclaration(attribute: Attribute): Generated {
-    return toNode`
-        int ${attribute.name} = 0;
-    `;
-}
+// function generateAttributeDeclaration(attribute: Attribute): Generated {
+//     // attribute.defaultValue = 
+//     return toNode`
+//         int ${attribute.name}${generateAttributeDefaultValue(attribute)};
+//     `;
+// }
 
-function generateAttributeDefaultValue(attribute: Attribute): string {
-    if (attribute.defaultValue) {
-        const env: StatemachineEnv = new Map();
-        const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
-        return ` = ${defaultValue}`;
-    }
-    return '';
-}
+// function generateAttributeDefaultValue(attribute: Attribute): string {
+//     if (attribute.defaultValue) {
+//         const env: StatemachineEnv = new Map();
+//         const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
+//         return ` = ${defaultValue}`;
+//     }
+//     return '= 0';
+// }
 
 function generateAttributeInitialization(attribute: Attribute, env: StatemachineEnv): Generated {
     if (attribute.defaultValue) {
         const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
         env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
-        return toNode`this->${attribute.name} = ${defaultValue};`;
+        if (attribute.defaultValue.$type == 'Lit') {
+            attribute.defaultValue.val = defaultValue;
+        }
+        else if (attribute.defaultValue.$type == 'Ref' && attribute.defaultValue.val.ref?.defaultValue?.$type == 'Lit') {
+            attribute.defaultValue.val.ref.defaultValue.val = defaultValue;
+        }
+        return toNode`
+            int ${attribute.name} = ${defaultValue};
+            std::cout << "${attribute.name}: " << ${env.get(attribute.name)} << std::endl;
+        `;
     }
-    return toNode`this->${attribute.name} = 0;`; // Set default value to 0
+    return toNode`int ${attribute.name} = 0;`; // Set default value to 0
 }
 
 
@@ -336,13 +339,16 @@ function generateAttributeInitialization(attribute: Attribute, env: Statemachine
 // }
 
 function generateMain(ctx: GeneratorContext): Generated {
+    const env: StatemachineEnv = new Map();
     return toNode`
         int main() {
             ${ctx.statemachine.name} *statemachine = new ${ctx.statemachine.name}(new ${ctx.statemachine.init.$refText});
 
             static std::map<std::string, Event> event_by_name;
             ${joinWithExtraNL(ctx.statemachine.events, event => `event_by_name["${event.name}"] = &${ctx.statemachine.name}::${event.name};`)}
-
+            ${joinWithExtraNL(ctx.statemachine.attributes, attribute => toNode`
+                ${generateAttributeInitialization(attribute, env)}
+            `)}
             for (std::string input; std::getline(std::cin, input);) {
                 std::map<std::string, Event>::const_iterator event_by_name_it = event_by_name.find(input);
                 if (event_by_name_it == event_by_name.end()) {

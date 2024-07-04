@@ -37,7 +37,7 @@ Assignment:
     variable=[Attribute] '=' expression=Expr;
 
 Attribute:
-    name=ID ('=' defaultValue=Expr)? ; //expression
+    name=ID ('=' defaultValue=Expr | NUMBER)? ; //expression
 
 // Expressions
 Expr: Add;

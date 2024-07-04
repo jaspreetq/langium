@@ -534,23 +534,35 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             }
           },
           {
-            "$type": "Group",
+            "$type": "Alternatives",
             "elements": [
               {
-                "$type": "Keyword",
-                "value": "="
+                "$type": "Group",
+                "elements": [
+                  {
+                    "$type": "Keyword",
+                    "value": "="
+                  },
+                  {
+                    "$type": "Assignment",
+                    "feature": "defaultValue",
+                    "operator": "=",
+                    "terminal": {
+                      "$type": "RuleCall",
+                      "rule": {
+                        "$ref": "#/rules@10"
+                      },
+                      "arguments": []
+                    }
+                  }
+                ]
               },
               {
-                "$type": "Assignment",
-                "feature": "defaultValue",
-                "operator": "=",
-                "terminal": {
-                  "$type": "RuleCall",
-                  "rule": {
-                    "$ref": "#/rules@10"
-                  },
-                  "arguments": []
-                }
+                "$type": "RuleCall",
+                "rule": {
+                  "$ref": "#/rules@20"
+                },
+                "arguments": []
               }
             ],
             "cardinality": "?"

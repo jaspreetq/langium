@@ -5,7 +5,7 @@ events
     next
 
 attributes 
-    cnt = (12 + 2*20) - 23
+    cnt = 12-((12+10)/5)
     u = 1
 initialState PowerOff
 
