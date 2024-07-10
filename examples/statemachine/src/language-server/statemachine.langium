@@ -16,16 +16,16 @@ Command:
 
 State:
     'state' name=ID
-        ('actions' '{' actions+=[Command]+ '}')?
+        ('actions' '{' actions+=Action+ '}')?
         transitions+=Transition*
     'end';
 
 Transition:
-    event=[Event:ID] ('when' guard=GuardCondition)? '=>' state=[State] ('with' actions+=Action+)?;
+    event=[Event:ID] ('when' guard=Expr)? '=>' state=[State] ('with' actions+=Action+)?;
 
 // yet to include LessThan | GreaterThan | Equal | NotEqual | And | Or | Not | 
-GuardCondition: 
-    expression= '(' GuardCondition ')';
+// GuardCondition: 
+//     expression= '(' GuardCondition ')';
 
 Action:
     assignment=Assignment | print=PrintStatement;
@@ -37,10 +37,22 @@ Assignment:
     variable=[Attribute] '=' expression=Expr;
 
 Attribute:
-    name=ID ('=' defaultValue=Expr | NUMBER)? ; //expression
+    name=ID ('=' defaultValue=Expr)? ; //expression
 
 // Expressions
-Expr: Add;
+Expr: Or; 
+
+Or infers Expr:
+    And ({infer BinExpr.e1=current} op='||' e2=And)*;
+
+And infers Expr:
+    Equality ({infer BinExpr.e1=current} op='&&' e2=Equality)*;
+
+Equality infers Expr:
+    Comparison ({infer BinExpr.e1=current} op=('==' | '!=') e2=Comparison)*;
+
+Comparison infers Expr:
+    Add ({infer BinExpr.e1=current} op=('<' | '>' | '<=' | '>=') e2=Add)*;
 
 Add  infers Expr: 
     Mult     ({infer BinExpr.e1=current} op=('+'|'-') e2=Mult)*;
@@ -55,6 +67,7 @@ Group:      '(' ge=Expr ')';
 NegExpr:    '-' ne=Expr;
 
 hidden terminal WS: /\s+/;
+terminal BoolExpr returns boolean: 'true' | 'false';
 terminal ID: /[_a-zA-Z][\w_]*/;
 terminal NUMBER returns number: /[0-9]+(\.[0-9]*)?/;
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;

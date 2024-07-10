@@ -49,6 +49,7 @@ function joinWithExtraNL<T>(content: T[], toString: (e: T) => Generated): Genera
 }
 
 export function generateCppContent(ctx: GeneratorContext): Generated {
+    const env: StatemachineEnv = new Map();
     return toNode`
         #include <iostream>
         #include <map>
@@ -58,15 +59,14 @@ export function generateCppContent(ctx: GeneratorContext): Generated {
 
         ${generateStateClass(ctx)}
 
-
         ${generateStatemachineClass(ctx)}
-
+        
         ${joinWithExtraNL(ctx.statemachine.states, state => generateStateDeclaration(ctx, state))}
-        ${joinWithExtraNL(ctx.statemachine.states, state => generateStateDefinition(ctx, state))}
+        ${joinWithExtraNL(ctx.statemachine.states, state => generateStateDefinition(ctx, state, env))}
 
         typedef void (${ctx.statemachine.name}::*Event)();
 
-        ${generateMain(ctx)}
+        ${generateMain(ctx, env)}
 
     `;
 }
@@ -137,7 +137,6 @@ function generateStatemachineClass(ctx: GeneratorContext): Generated {
 
 function generateStateDeclaration(ctx: GeneratorContext, state: State): Generated {
     return toNode`
-
         class ${state.name} : public State {
         public:
             std::string get_name() override { return "${state.name}"; }
@@ -146,16 +145,23 @@ function generateStateDeclaration(ctx: GeneratorContext, state: State): Generate
     `;
 }
 
-function generateStateDefinition(ctx: GeneratorContext, state: State): Generated {
-    return toNode`
+function generateStateDefinition(ctx: GeneratorContext, state: State, env: StatemachineEnv): Generated {
+    // state.transitions.forEach((transition, idx) => {
+    //     if (transition.guard) {
+    //         env.set(state.name + idx, evalExprWithEnv(transition.guard, env));
+    //     }
+    // });
 
+    return toNode`
         // ${state.name}
         ${join(state.transitions, transition => toNode`
             void ${state.name}::${transition.event.$refText}() {
-                statemachine->transition_to(new ${transition.state.$refText});
+                if(${transition.guard != undefined ? (evalExprWithEnv(transition.guard, env) > 0) ? true : false : true}) {
+                    statemachine->transition_to(new ${transition.state.$refText});
+            } else {
+                std::cout << "Transition not allowed." << std::endl;
             }
-
-
+        }
         `)}
     `;
 }
@@ -166,10 +172,10 @@ function evalExprWithEnv(e: Expr, env: StatemachineEnv): number {//
 
     } else if (isRef(e)) {
         const v = env.get(e.val.ref?.name ?? '');
-        if (v !== undefined) {
+        if (v != undefined) {
             return v;
         }
-        throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${e.val.$refText}' in the env.`);
+        throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
 
     } else if (isBinExpr(e)) {
         let opval = e.op;
@@ -181,6 +187,14 @@ function evalExprWithEnv(e: Expr, env: StatemachineEnv): number {//
             case '-': return v1 - v2;
             case '*': return v1 * v2;
             case '/': return v1 / v2;
+            case '<': return v1 < v2 ? 1 : 0;
+            case '>': return v1 > v2 ? 1 : 0;
+            case '<=': return v1 <= v2 ? 1 : 0;
+            case '>=': return v1 >= v2 ? 1 : 0;
+            case '==': return v1 === v2 ? 1 : 0;
+            case '!=': return v1 !== v2 ? 1 : 0;
+            case '&&': return (v1 && v2) ? 1 : 0;
+            case '||': return (v1 || v2) ? 1 : 0;
             default: throw new Error(`Unrecognized bin op passed: ${opval}`);
         }
 
@@ -198,7 +212,7 @@ function evalExprWithEnv(e: Expr, env: StatemachineEnv): number {//
 // function generateAttributeDeclaration(attribute: Attribute): Generated {
 //     // attribute.defaultValue = 
 //     return toNode`
-//         int ${attribute.name}${generateAttributeDefaultValue(attribute)};
+//         int ${attribute.name} = 0;
 //     `;
 // }
 
@@ -338,8 +352,7 @@ function generateAttributeInitialization(attribute: Attribute, env: Statemachine
 //     return toNode``;
 // }
 
-function generateMain(ctx: GeneratorContext): Generated {
-    const env: StatemachineEnv = new Map();
+function generateMain(ctx: GeneratorContext, env: StatemachineEnv): Generated {
     return toNode`
         int main() {
             ${ctx.statemachine.name} *statemachine = new ${ctx.statemachine.name}(new ${ctx.statemachine.init.$refText});

@@ -32,7 +32,7 @@ export function isPrimExpr(item: unknown): item is PrimExpr {
 }
 
 export interface Action extends AstNode {
-    readonly $container: Transition;
+    readonly $container: State | Transition;
     readonly $type: 'Action';
     assignment?: Assignment;
     print?: PrintStatement;
@@ -71,11 +71,11 @@ export function isAttribute(item: unknown): item is Attribute {
 }
 
 export interface BinExpr extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement;
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement | Transition;
     readonly $type: 'BinExpr';
     e1: Expr | PrimExpr;
     e2: Expr | PrimExpr;
-    op: '*' | '+' | '-' | '/';
+    op: '!=' | '&&' | '*' | '+' | '-' | '/' | '<' | '<=' | '==' | '>' | '>=' | '||';
 }
 
 export const BinExpr = 'BinExpr';
@@ -109,7 +109,7 @@ export function isEvent(item: unknown): item is Event {
 }
 
 export interface Group extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement;
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement | Transition;
     readonly $type: 'Group';
     ge: Expr;
 }
@@ -120,20 +120,8 @@ export function isGroup(item: unknown): item is Group {
     return reflection.isInstance(item, Group);
 }
 
-export interface GuardCondition extends AstNode {
-    readonly $container: Transition;
-    readonly $type: 'GuardCondition';
-    expression: '(';
-}
-
-export const GuardCondition = 'GuardCondition';
-
-export function isGuardCondition(item: unknown): item is GuardCondition {
-    return reflection.isInstance(item, GuardCondition);
-}
-
 export interface Lit extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement;
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement | Transition;
     readonly $type: 'Lit';
     val: number;
 }
@@ -145,7 +133,7 @@ export function isLit(item: unknown): item is Lit {
 }
 
 export interface NegExpr extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement;
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement | Transition;
     readonly $type: 'NegExpr';
     ne: Expr;
 }
@@ -169,7 +157,7 @@ export function isPrintStatement(item: unknown): item is PrintStatement {
 }
 
 export interface Ref extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement;
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement | Transition;
     readonly $type: 'Ref';
     val: Reference<Attribute>;
 }
@@ -183,7 +171,7 @@ export function isRef(item: unknown): item is Ref {
 export interface State extends AstNode {
     readonly $container: Statemachine;
     readonly $type: 'State';
-    actions: Array<Reference<Command>>;
+    actions: Array<Action>;
     name: string;
     transitions: Array<Transition>;
 }
@@ -215,7 +203,7 @@ export interface Transition extends AstNode {
     readonly $type: 'Transition';
     actions: Array<Action>;
     event: Reference<Event>;
-    guard?: GuardCondition;
+    guard?: Expr;
     state: Reference<State>;
 }
 
@@ -234,7 +222,6 @@ export type StatemachineAstType = {
     Event: Event
     Expr: Expr
     Group: Group
-    GuardCondition: GuardCondition
     Lit: Lit
     NegExpr: NegExpr
     PrimExpr: PrimExpr
@@ -248,7 +235,7 @@ export type StatemachineAstType = {
 export class StatemachineAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [Action, Assignment, Attribute, BinExpr, Command, Event, Expr, Group, GuardCondition, Lit, NegExpr, PrimExpr, PrintStatement, Ref, State, Statemachine, Transition];
+        return [Action, Assignment, Attribute, BinExpr, Command, Event, Expr, Group, Lit, NegExpr, PrimExpr, PrintStatement, Ref, State, Statemachine, Transition];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -275,9 +262,6 @@ export class StatemachineAstReflection extends AbstractAstReflection {
             case 'Assignment:variable':
             case 'Ref:val': {
                 return Attribute;
-            }
-            case 'State:actions': {
-                return Command;
             }
             case 'Statemachine:init':
             case 'Transition:state': {
@@ -352,14 +336,6 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                     name: Group,
                     properties: [
                         { name: 'ge' }
-                    ]
-                };
-            }
-            case GuardCondition: {
-                return {
-                    name: GuardCondition,
-                    properties: [
-                        { name: 'expression' }
                     ]
                 };
             }
