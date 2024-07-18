@@ -6,6 +6,7 @@ entry Statemachine:
     ('commands'    commands+=Command+)?
     ('attributes' attributes+=Attribute+)?
     'initialState' init=[State]
+    Assignments+=Assignment*
     states+=State*;
 
 Event:
@@ -34,7 +35,7 @@ PrintStatement:
     'print' '(' value=( Expr) ')';
 
 Assignment:
-     variable=[Attribute] '=' expression=BoolExpr | Expr;
+     variable=[Attribute] '=' value=BoolExpr | Expr;
 
 Attribute:
     name=ID ':' type=TYPE ('=' defaultValue=BoolExpr| Expr)?; // expression
@@ -48,10 +49,10 @@ Conditional infers BoolExpr:
 Comparison infers BoolExpr:
     BooleanPrimExpr ({infer BinExpr.e1=current} op=('<=' | '<' | '>=' |  '>' | '==' | '!=') e2=BooleanPrimExpr)*;
 
-BooleanPrimExpr: BoolLit | BoolGroup | Expr;
+BooleanPrimExpr: BoolLit | BoolRef | BoolGroup |Expr;
 BoolLit: val=BOOL_VALUE;
-BoolGroup: '(' gbe=BoolExpr ')'; 
-
+BoolRef: val=[Attribute:ID];
+BoolGroup: '(' gbe=BoolExpr ')';
 // BoolExpComp: leftExpression= Expr op=('==' | '!=' | '<' | '>' | '<=' | '>=' ) rightExpression=Expr;
 
 // Expressions

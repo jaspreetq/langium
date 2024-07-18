@@ -17,7 +17,7 @@ export const StatemachineTerminals = {
     SL_COMMENT: /\/\/[^\n\r]*/,
 };
 
-export type BooleanPrimExpr = BoolGroup | BoolLit | Expr;
+export type BooleanPrimExpr = BoolGroup | BoolLit | BoolRef | Expr;
 
 export const BooleanPrimExpr = 'BooleanPrimExpr';
 
@@ -63,9 +63,9 @@ export function isAction(item: unknown): item is Action {
 }
 
 export interface Assignment extends AstNode {
-    readonly $container: Action;
+    readonly $container: Action | Statemachine;
     readonly $type: 'Assignment' | 'BinExpr' | 'Expr' | 'Group' | 'Lit' | 'NegExpr' | 'PrimExpr' | 'Ref';
-    expression: BoolExpr;
+    value: BoolExpr;
     variable: Reference<Attribute>;
 }
 
@@ -125,6 +125,18 @@ export const BoolLit = 'BoolLit';
 
 export function isBoolLit(item: unknown): item is BoolLit {
     return reflection.isInstance(item, BoolLit);
+}
+
+export interface BoolRef extends AstNode {
+    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Transition;
+    readonly $type: 'BoolRef';
+    val: Reference<Attribute>;
+}
+
+export const BoolRef = 'BoolRef';
+
+export function isBoolRef(item: unknown): item is BoolRef {
+    return reflection.isInstance(item, BoolRef);
 }
 
 export interface Command extends AstNode {
@@ -227,6 +239,7 @@ export function isState(item: unknown): item is State {
 
 export interface Statemachine extends AstNode {
     readonly $type: 'Statemachine';
+    Assignments: Array<Assignment>;
     attributes: Array<Attribute>;
     commands: Array<Command>;
     events: Array<Event>;
@@ -264,6 +277,7 @@ export type StatemachineAstType = {
     BoolExpr: BoolExpr
     BoolGroup: BoolGroup
     BoolLit: BoolLit
+    BoolRef: BoolRef
     BooleanPrimExpr: BooleanPrimExpr
     Command: Command
     Event: Event
@@ -282,7 +296,7 @@ export type StatemachineAstType = {
 export class StatemachineAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [Action, Assignment, Attribute, BinExpr, BoolExpr, BoolGroup, BoolLit, BooleanPrimExpr, Command, Event, Expr, Group, Lit, NegExpr, PrimExpr, PrintStatement, Ref, State, Statemachine, Transition];
+        return [Action, Assignment, Attribute, BinExpr, BoolExpr, BoolGroup, BoolLit, BoolRef, BooleanPrimExpr, Command, Event, Expr, Group, Lit, NegExpr, PrimExpr, PrintStatement, Ref, State, Statemachine, Transition];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -294,7 +308,8 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                 return this.isSubtype(BoolExpr, supertype);
             }
             case BoolGroup:
-            case BoolLit: {
+            case BoolLit:
+            case BoolRef: {
                 return this.isSubtype(BooleanPrimExpr, supertype);
             }
             case Expr: {
@@ -319,6 +334,7 @@ export class StatemachineAstReflection extends AbstractAstReflection {
         const referenceId = `${refInfo.container.$type}:${refInfo.property}`;
         switch (referenceId) {
             case 'Assignment:variable':
+            case 'BoolRef:val':
             case 'Ref:val': {
                 return Attribute;
             }
@@ -350,7 +366,7 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                 return {
                     name: Assignment,
                     properties: [
-                        { name: 'expression' },
+                        { name: 'value' },
                         { name: 'variable' }
                     ]
                 };
@@ -388,6 +404,14 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                     name: BoolLit,
                     properties: [
                         { name: 'val', defaultValue: false }
+                    ]
+                };
+            }
+            case BoolRef: {
+                return {
+                    name: BoolRef,
+                    properties: [
+                        { name: 'val' }
                     ]
                 };
             }
@@ -461,6 +485,7 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                 return {
                     name: Statemachine,
                     properties: [
+                        { name: 'Assignments', defaultValue: [] },
                         { name: 'attributes', defaultValue: [] },
                         { name: 'commands', defaultValue: [] },
                         { name: 'events', defaultValue: [] },

@@ -12,11 +12,11 @@ attributes
 initialState PowerOff
 
 state PowerOff
-    switchCapacity when false => RedLight
+    switchCapacity when true => RedLight
 end
 
 state RedLight
-    switchCapacity when (((12-32*30) < 9+8) || (23 < 0)) => PowerOff
+    switchCapacity when (((12-32*30) > 9+8) || (cnt < 0)) => PowerOff
     next => GreenLight
 end
 

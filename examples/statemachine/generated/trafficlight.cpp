@@ -32,6 +32,9 @@ class TrafficLight {
 private:
     State* state = nullptr;
 public:
+    int cnt;
+    bool isEmpty;
+    bool checkDefault;
     TrafficLight(State* initial_state) {
         initial_state->set_context(this);
         state = initial_state;
@@ -52,14 +55,12 @@ public:
         new_state->set_context(this);
         state = new_state;
     }
-
-    void switchCapacity() {
-        state->switchCapacity();
-    }
-
-    void next() {
-        state->next();
-    }
+void switchCapacity() {
+    state->switchCapacity();
+}
+void next() {
+    state->next();
+}
 
 };
 
@@ -87,55 +88,79 @@ public:
     void next() override;
 };
 // PowerOff
-void PowerOff::switchCapacity() {
-    if (false) {
-        statemachine->transition_to(new RedLight);
-    } else {
-        std::cout << "Transition not allowed." << std::endl;
-    }
-}
+
+        void PowerOff::switchCapacity() {
+            if(true) {
+                
+                statemachine->transition_to(new RedLight);
+            } else {
+                std::cout << "Transition not allowed." << std::endl;
+            }
+        }
+        
 // RedLight
-void RedLight::switchCapacity() {
-    if (true) {
-        statemachine->transition_to(new PowerOff);
-    } else {
-        std::cout << "Transition not allowed." << std::endl;
-    }
-}void RedLight::next() {
-    if (true) {
-        statemachine->transition_to(new GreenLight);
-    } else {
-        std::cout << "Transition not allowed." << std::endl;
-    }
-}
+
+        void RedLight::switchCapacity() {
+            if((((12 - (32 * 30)) > (9 + 8)) || (statemachine->cnt < 0))) {
+                
+                statemachine->transition_to(new PowerOff);
+            } else {
+                std::cout << "Transition not allowed." << std::endl;
+            }
+        }
+        
+
+        void RedLight::next() {
+            if(true) {
+                
+                statemachine->transition_to(new GreenLight);
+            } else {
+                std::cout << "Transition not allowed." << std::endl;
+            }
+        }
+        
 // YellowLight
-void YellowLight::switchCapacity() {
-    if (true) {
-        statemachine->transition_to(new PowerOff);
-    } else {
-        std::cout << "Transition not allowed." << std::endl;
-    }
-}void YellowLight::next() {
-    if (true) {
-        statemachine->transition_to(new RedLight);
-    } else {
-        std::cout << "Transition not allowed." << std::endl;
-    }
-}
+
+        void YellowLight::switchCapacity() {
+            if(true) {
+                
+                statemachine->transition_to(new PowerOff);
+            } else {
+                std::cout << "Transition not allowed." << std::endl;
+            }
+        }
+        
+
+        void YellowLight::next() {
+            if(true) {
+                
+                statemachine->transition_to(new RedLight);
+            } else {
+                std::cout << "Transition not allowed." << std::endl;
+            }
+        }
+        
 // GreenLight
-void GreenLight::switchCapacity() {
-    if (true) {
-        statemachine->transition_to(new PowerOff);
-    } else {
-        std::cout << "Transition not allowed." << std::endl;
-    }
-}void GreenLight::next() {
-    if (true) {
-        statemachine->transition_to(new YellowLight);
-    } else {
-        std::cout << "Transition not allowed." << std::endl;
-    }
-}
+
+        void GreenLight::switchCapacity() {
+            if(true) {
+                
+                statemachine->transition_to(new PowerOff);
+            } else {
+                std::cout << "Transition not allowed." << std::endl;
+            }
+        }
+        
+
+        void GreenLight::next() {
+            if(true) {
+                
+                statemachine->transition_to(new YellowLight);
+            } else {
+                std::cout << "Transition not allowed." << std::endl;
+            }
+        }
+        
 
 typedef void (TrafficLight::*Event)();
 

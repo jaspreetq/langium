@@ -1,3 +1,4 @@
+// import { Expression } from './../../../../packages/langium/test/grammar/type-system/inferred-types.test';
 /******************************************************************************
  * Copyright 2021 TypeFox GmbH
  * This program and the accompanying materials are made available under the
@@ -7,7 +8,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { type Generated, expandToNode as toNode, joinToNode as join, toString } from 'langium/generate';
-import { Attribute, BoolExpr, Expr, isBinExpr, isBoolGroup, isBoolLit, isExpr, isGroup, isLit, isNegExpr, isRef, type State, type Statemachine } from '../language-server/generated/ast.js';
+import { Action, Attribute, BoolExpr, Expr, isBinExpr, isBoolExpr, isBoolGroup, isBoolLit, isBoolRef, isExpr, isGroup, isLit, isNegExpr, isRef, type State, type Statemachine } from '../language-server/generated/ast.js';
 import { extractDestinationAndName } from './cli-util.js';
 // isExpr
 // For precise white space handling in generation template
@@ -60,7 +61,7 @@ export function generateCppContent(ctx: GeneratorContext): Generated {
 
         ${generateStateClass(ctx)}
 
-        ${generateStatemachineClass(ctx)}
+        ${generateStatemachineClass(ctx, env)}
         
         ${joinWithExtraNL(ctx.statemachine.states, state => generateStateDeclaration(ctx, state))}
         ${joinWithExtraNL(ctx.statemachine.states, state => generateStateDefinition(ctx, state, env))}
@@ -98,13 +99,15 @@ function generateStateClass(ctx: GeneratorContext): Generated {
     `;
 }
 
-function generateStatemachineClass(ctx: GeneratorContext): Generated {
-
+function generateStatemachineClass(ctx: GeneratorContext, env: StatemachineEnv): Generated {
     return toNode`
         class ${ctx.statemachine.name} {
         private:
             State* state = nullptr;
         public:
+            ${joinWithExtraNL(ctx.statemachine.attributes, attribute => toNode`
+                ${generateAttributeDeclaration(attribute, env)}
+            `)}
             ${ctx.statemachine.name}(State* initial_state) {
                 initial_state->set_context(this);
                 state = initial_state;
@@ -126,7 +129,6 @@ function generateStatemachineClass(ctx: GeneratorContext): Generated {
                 state = new_state;
             }
         ${joinWithExtraNL(ctx.statemachine.events, event => toNode`
-            
                 void ${event.name}() {
                     state->${event.name}();
                 }
@@ -178,8 +180,13 @@ function evalExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): number {//
     } else if (isGroup(e)) {
         return evalExprWithEnv(e.ge, env);
 
+    } else if (isBoolExpr(e)) {
+        if (isBoolLit(e) || isBoolRef(e)) {
+            throw new Error('Unhandled Expression: ' + e);
+        } else if (isBoolGroup(e)) {
+            return evalExprWithEnv(e.gbe, env);
+        }
     }
-
     throw new Error('Unhandled Expression: ' + e);
 
 }
@@ -227,21 +234,94 @@ function evalBoolExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): boolean 
     throw new Error('Unhandled Boolean Expression: ' + e);
 }
 
+function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv): Generated {
+    // attribute.defaultValue =
+    return toNode`
+                    ${attribute.type} ${attribute.name};
+        `;
+}
 
 function generateStateDefinition(ctx: GeneratorContext, state: State, env: StatemachineEnv): Generated {
+    const transitionsCode = state.transitions.map(transition => {
+        const guardCondition = transition.guard != undefined ? convertBoolExprToString(transition.guard, env) : "true";
+        const actionsCode = transition.actions.map(action => generateAction(action, env)).join('\n');
+
+        return `
+        void ${state.name}::${transition.event.$refText}() {
+            if(${guardCondition}) {
+                ${actionsCode}
+                statemachine->transition_to(new ${transition.state.$refText});
+            } else {
+                std::cout << "Transition not allowed." << std::endl;
+            }
+        }
+        `;
+    }).join('\n');
+
     return toNode`
         // ${state.name}
-        ${join(state.transitions, transition => toNode`
-            void ${state.name}::${transition.event.$refText}() {
-                if (${transition.guard != undefined ? evalBoolExprWithEnv(transition.guard, env) : true}) {
-                    statemachine->transition_to(new ${transition.state.$refText});
-                } else {
-                    std::cout << "Transition not allowed." << std::endl;
-                }
-            }
-        `)}
+        ${transitionsCode}
     `;
 }
+
+function generateAction(action: Action, env: StatemachineEnv): string {
+    if (action.assignment) {
+        const value = evalExprWithEnv(action.assignment.value, env);
+        return `${action.assignment.variable.$refText} = ${value};`;
+    } else if (action.print) {
+        const value = evalExprWithEnv(action.print.value, env);
+        return `std::cout << ${value} << std::endl;`;
+    }
+    return '';
+}
+
+function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv): string {
+    if (isLit(e)) {
+        return e.val.toString();
+    } else if (isRef(e)) {
+        return 'statemachine->' + e.val.ref?.name ?? '';
+    } else if (isBinExpr(e)) {
+        let op = e.op;
+        let left = convertBoolExprToString(e.e1, env);
+        let right = convertBoolExprToString(e.e2, env);
+        return `(${left} ${op} ${right})`;
+    } else if (isNegExpr(e)) {
+        let expr = convertBoolExprToString(e.ne, env);
+        return `-${expr}`;
+    } else if (isGroup(e)) {
+        let expr = convertBoolExprToString(e.ge, env);
+        return `(${expr})`;
+    } else if (isBoolLit(e)) {
+        return e.val.toString();
+    } else if (isBoolGroup(e)) {
+        return convertBoolExprToString(e.gbe, env);
+    } else if (isExpr(e)) {
+        return evalExprWithEnv(e, env).toString();
+    } else if (isBoolRef(e)) {
+        return 'statemachine->' + e.val.ref?.name ?? '';
+    } else if (e === undefined) {
+        return 'true';
+    }
+    throw new Error('Unhandled Expression: ' + e);
+}
+
+
+// function generateStateDefinition(ctx: GeneratorContext, state: State, env: StatemachineEnv): Generated {
+//     return toNode`
+//         // ${state.name}
+//         ${join(state.transitions, transition => toNode`
+//             void ${state.name}::${transition.event.$refText}() {
+//                 std::cout << "Transitioning from container: ${transition.guard?.$container} idx: ${transition.guard?.$containerIndex} ${transition.guard?.$containerProperty} ${transition.guard?.$cstNode} ${transition.guard?.$document}to ${transition.$cstNode}" << std::endl;
+//                 if (true) {
+//                     ${transition.guard}
+//                     statemachine->transition_to(new ${transition.state.$refText});
+//                 } else {
+//                     std::cout << "Transition not allowed." << std::endl;
+//                 }
+//             }
+//         `)}
+//     `;
+// }
 
 // INT Case //////////////////////////////////////////////////////
 // else if (attribute.defaultValue && attribute.type === 'int') {
