@@ -5,7 +5,7 @@
  ******************************************************************************/
 
 import type { ValidationAcceptor, ValidationChecks } from 'langium';
-import type { State, Statemachine, StatemachineAstType, Event, Attribute } from './generated/ast.js';
+import { type State, type Statemachine, type StatemachineAstType, type Event, type Attribute, isBoolExpr, isExpr } from './generated/ast.js';
 import type { StatemachineServices } from './statemachine-module.js';
 import { MultiMap } from 'langium';
 
@@ -15,6 +15,7 @@ export function registerValidationChecks(services: StatemachineServices) {
     const checks: ValidationChecks<StatemachineAstType> = {
         State: validator.checkStateNameStartsWithCapital,
         Statemachine: validator.checkUniqueStatesEventsAndAttributes
+        // Attribute: validator.checkAttributeType,
     };
     registry.register(checks, validator);
 }
@@ -56,4 +57,51 @@ export class StatemachineValidator {
             }
         }
     }
+
+    checkAttributeType(attribute: Attribute, accept: ValidationAcceptor): void {
+        if (attribute.type) {
+            const type = attribute.type;
+            if (type !== 'int' && type !== 'bool') {
+                accept('error', `Unsupported attribute type: ${type}`, { node: attribute, property: 'type' });
+            } else if (type === 'int') {
+                if (!isExpr(attribute.defaultValue)) {
+                    accept('error', `Attribute value does not match the type: ${attribute.defaultValue?.$type}`, { node: attribute, property: 'defaultValue' });
+                }
+            } else {
+                if (isExpr(attribute.defaultValue)) {
+                    accept('error', `Attribute value does not match the type: ${attribute.defaultValue?.$type}`, { node: attribute, property: 'defaultValue' });
+                }
+            }
+        }
+
+    }
+
+    checkAttributeTypeConsistency(attribute: Attribute, accept: ValidationAcceptor): void {
+        if (attribute.defaultValue) {
+            const type = attribute.type;
+            const defaultValue = attribute.defaultValue;
+            const isBooleanValue = isBoolExpr(defaultValue);
+            const isNumberValue = isExpr(defaultValue);
+
+            if (type === 'bool' && !isBooleanValue) {
+                accept('error', 'The default value must be a boolean.', { node: attribute, property: 'defaultValue' });
+            } else if (type === 'int' && !isNumberValue) {
+                accept('error', 'The default value must be a number.', { node: attribute, property: 'defaultValue' });
+            }
+        }
+    }
+    // matchAttributeTypeWithValues(attribute: Attribute, accept: ValidationAcceptor): void {
+    //     if (attribute.type) {
+    //         const type = attribute.type;
+    //         if (type === 'int') {
+    //             if (attribute.defaultValue && isNaN(+attribute.defaultValue)) {
+    //                 accept('error', `Attribute value does not match the type: ${attribute.defaultValue}`, { node: attribute, property: 'defaultValue' });
+    //             }
+    //         } else if (type === 'boolean') {
+    //             if (attribute.defaultValue?.$type !== BoolLit) {
+    //                 accept('error', `Attribute value does not match the type: ${attribute.defaultValue}`, { node: attribute, property: 'defaultValue' });
+    //             }
+    //         }
+    //     }
+    // }
 }

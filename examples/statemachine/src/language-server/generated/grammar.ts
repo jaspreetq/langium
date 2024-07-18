@@ -30,7 +30,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@23"
+                "$ref": "#/rules@26"
               },
               "arguments": []
             }
@@ -151,7 +151,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
         "terminal": {
           "$type": "RuleCall",
           "rule": {
-            "$ref": "#/rules@23"
+            "$ref": "#/rules@26"
           },
           "arguments": []
         }
@@ -173,7 +173,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
         "terminal": {
           "$type": "RuleCall",
           "rule": {
-            "$ref": "#/rules@23"
+            "$ref": "#/rules@26"
           },
           "arguments": []
         }
@@ -202,7 +202,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@23"
+                "$ref": "#/rules@26"
               },
               "arguments": []
             }
@@ -282,7 +282,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
               "terminal": {
                 "$type": "RuleCall",
                 "rule": {
-                  "$ref": "#/rules@23"
+                  "$ref": "#/rules@26"
                 },
                 "arguments": []
               },
@@ -419,7 +419,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@9"
+                "$ref": "#/rules@15"
               },
               "arguments": []
             }
@@ -441,35 +441,47 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
       "$type": "ParserRule",
       "name": "Assignment",
       "definition": {
-        "$type": "Group",
+        "$type": "Alternatives",
         "elements": [
           {
-            "$type": "Assignment",
-            "feature": "variable",
-            "operator": "=",
-            "terminal": {
-              "$type": "CrossReference",
-              "type": {
-                "$ref": "#/rules@8"
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Assignment",
+                "feature": "variable",
+                "operator": "=",
+                "terminal": {
+                  "$type": "CrossReference",
+                  "type": {
+                    "$ref": "#/rules@8"
+                  },
+                  "deprecatedSyntax": false
+                }
               },
-              "deprecatedSyntax": false
-            }
+              {
+                "$type": "Keyword",
+                "value": "="
+              },
+              {
+                "$type": "Assignment",
+                "feature": "expression",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@9"
+                  },
+                  "arguments": []
+                }
+              }
+            ]
           },
           {
-            "$type": "Keyword",
-            "value": "="
-          },
-          {
-            "$type": "Assignment",
-            "feature": "expression",
-            "operator": "=",
-            "terminal": {
-              "$type": "RuleCall",
-              "rule": {
-                "$ref": "#/rules@9"
-              },
-              "arguments": []
-            }
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@15"
+            },
+            "arguments": []
           }
         ]
       },
@@ -493,29 +505,57 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@23"
+                "$ref": "#/rules@26"
               },
               "arguments": []
             }
           },
           {
-            "$type": "Group",
+            "$type": "Keyword",
+            "value": ":"
+          },
+          {
+            "$type": "Assignment",
+            "feature": "type",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@24"
+              },
+              "arguments": []
+            }
+          },
+          {
+            "$type": "Alternatives",
             "elements": [
               {
-                "$type": "Keyword",
-                "value": "="
+                "$type": "Group",
+                "elements": [
+                  {
+                    "$type": "Keyword",
+                    "value": "="
+                  },
+                  {
+                    "$type": "Assignment",
+                    "feature": "defaultValue",
+                    "operator": "=",
+                    "terminal": {
+                      "$type": "RuleCall",
+                      "rule": {
+                        "$ref": "#/rules@9"
+                      },
+                      "arguments": []
+                    }
+                  }
+                ]
               },
               {
-                "$type": "Assignment",
-                "feature": "defaultValue",
-                "operator": "=",
-                "terminal": {
-                  "$type": "RuleCall",
-                  "rule": {
-                    "$ref": "#/rules@9"
-                  },
-                  "arguments": []
-                }
+                "$type": "RuleCall",
+                "rule": {
+                  "$ref": "#/rules@15"
+                },
+                "arguments": []
               }
             ],
             "cardinality": "?"
@@ -531,7 +571,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "Expr",
+      "name": "BoolExpr",
       "definition": {
         "$type": "RuleCall",
         "rule": {
@@ -548,10 +588,10 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "Or",
+      "name": "Conditional",
       "inferredType": {
         "$type": "InferredType",
-        "name": "Expr"
+        "name": "BoolExpr"
       },
       "definition": {
         "$type": "Group",
@@ -580,8 +620,17 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 "feature": "op",
                 "operator": "=",
                 "terminal": {
-                  "$type": "Keyword",
-                  "value": "||"
+                  "$type": "Alternatives",
+                  "elements": [
+                    {
+                      "$type": "Keyword",
+                      "value": "||"
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "&&"
+                    }
+                  ]
                 }
               },
               {
@@ -610,10 +659,10 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "And",
+      "name": "Comparison",
       "inferredType": {
         "$type": "InferredType",
-        "name": "Expr"
+        "name": "BoolExpr"
       },
       "definition": {
         "$type": "Group",
@@ -642,8 +691,33 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 "feature": "op",
                 "operator": "=",
                 "terminal": {
-                  "$type": "Keyword",
-                  "value": "&&"
+                  "$type": "Alternatives",
+                  "elements": [
+                    {
+                      "$type": "Keyword",
+                      "value": "<="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "<"
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": ">="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": ">"
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "=="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "!="
+                    }
+                  ]
                 }
               },
               {
@@ -672,13 +746,9 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "Equality",
-      "inferredType": {
-        "$type": "InferredType",
-        "name": "Expr"
-      },
+      "name": "BooleanPrimExpr",
       "definition": {
-        "$type": "Group",
+        "$type": "Alternatives",
         "elements": [
           {
             "$type": "RuleCall",
@@ -688,49 +758,18 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "arguments": []
           },
           {
-            "$type": "Group",
-            "elements": [
-              {
-                "$type": "Action",
-                "inferredType": {
-                  "$type": "InferredType",
-                  "name": "BinExpr"
-                },
-                "feature": "e1",
-                "operator": "="
-              },
-              {
-                "$type": "Assignment",
-                "feature": "op",
-                "operator": "=",
-                "terminal": {
-                  "$type": "Alternatives",
-                  "elements": [
-                    {
-                      "$type": "Keyword",
-                      "value": "=="
-                    },
-                    {
-                      "$type": "Keyword",
-                      "value": "!="
-                    }
-                  ]
-                }
-              },
-              {
-                "$type": "Assignment",
-                "feature": "e2",
-                "operator": "=",
-                "terminal": {
-                  "$type": "RuleCall",
-                  "rule": {
-                    "$ref": "#/rules@13"
-                  },
-                  "arguments": []
-                }
-              }
-            ],
-            "cardinality": "*"
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@14"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@15"
+            },
+            "arguments": []
           }
         ]
       },
@@ -743,75 +782,70 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "Comparison",
-      "inferredType": {
-        "$type": "InferredType",
-        "name": "Expr"
+      "name": "BoolLit",
+      "definition": {
+        "$type": "Assignment",
+        "feature": "val",
+        "operator": "=",
+        "terminal": {
+          "$type": "RuleCall",
+          "rule": {
+            "$ref": "#/rules@25"
+          },
+          "arguments": []
+        }
       },
+      "definesHiddenTokens": false,
+      "entry": false,
+      "fragment": false,
+      "hiddenTokens": [],
+      "parameters": [],
+      "wildcard": false
+    },
+    {
+      "$type": "ParserRule",
+      "name": "BoolGroup",
       "definition": {
         "$type": "Group",
         "elements": [
           {
-            "$type": "RuleCall",
-            "rule": {
-              "$ref": "#/rules@14"
-            },
-            "arguments": []
+            "$type": "Keyword",
+            "value": "("
           },
           {
-            "$type": "Group",
-            "elements": [
-              {
-                "$type": "Action",
-                "inferredType": {
-                  "$type": "InferredType",
-                  "name": "BinExpr"
-                },
-                "feature": "e1",
-                "operator": "="
+            "$type": "Assignment",
+            "feature": "gbe",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@9"
               },
-              {
-                "$type": "Assignment",
-                "feature": "op",
-                "operator": "=",
-                "terminal": {
-                  "$type": "Alternatives",
-                  "elements": [
-                    {
-                      "$type": "Keyword",
-                      "value": "<"
-                    },
-                    {
-                      "$type": "Keyword",
-                      "value": ">"
-                    },
-                    {
-                      "$type": "Keyword",
-                      "value": "<="
-                    },
-                    {
-                      "$type": "Keyword",
-                      "value": ">="
-                    }
-                  ]
-                }
-              },
-              {
-                "$type": "Assignment",
-                "feature": "e2",
-                "operator": "=",
-                "terminal": {
-                  "$type": "RuleCall",
-                  "rule": {
-                    "$ref": "#/rules@14"
-                  },
-                  "arguments": []
-                }
-              }
-            ],
-            "cardinality": "*"
+              "arguments": []
+            }
+          },
+          {
+            "$type": "Keyword",
+            "value": ")"
           }
         ]
+      },
+      "definesHiddenTokens": false,
+      "entry": false,
+      "fragment": false,
+      "hiddenTokens": [],
+      "parameters": [],
+      "wildcard": false
+    },
+    {
+      "$type": "ParserRule",
+      "name": "Expr",
+      "definition": {
+        "$type": "RuleCall",
+        "rule": {
+          "$ref": "#/rules@16"
+        },
+        "arguments": []
       },
       "definesHiddenTokens": false,
       "entry": false,
@@ -833,7 +867,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@15"
+              "$ref": "#/rules@17"
             },
             "arguments": []
           },
@@ -874,7 +908,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@15"
+                    "$ref": "#/rules@17"
                   },
                   "arguments": []
                 }
@@ -904,7 +938,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@16"
+              "$ref": "#/rules@18"
             },
             "arguments": []
           },
@@ -945,7 +979,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@16"
+                    "$ref": "#/rules@18"
                   },
                   "arguments": []
                 }
@@ -971,20 +1005,6 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@17"
-            },
-            "arguments": []
-          },
-          {
-            "$type": "RuleCall",
-            "rule": {
-              "$ref": "#/rules@18"
-            },
-            "arguments": []
-          },
-          {
-            "$type": "RuleCall",
-            "rule": {
               "$ref": "#/rules@19"
             },
             "arguments": []
@@ -993,6 +1013,20 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "$type": "RuleCall",
             "rule": {
               "$ref": "#/rules@20"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@21"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@22"
             },
             "arguments": []
           }
@@ -1015,7 +1049,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
         "terminal": {
           "$type": "RuleCall",
           "rule": {
-            "$ref": "#/rules@24"
+            "$ref": "#/rules@27"
           },
           "arguments": []
         }
@@ -1042,7 +1076,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
           "terminal": {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@23"
+              "$ref": "#/rules@26"
             },
             "arguments": []
           },
@@ -1073,7 +1107,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@9"
+                "$ref": "#/rules@15"
               },
               "arguments": []
             }
@@ -1108,7 +1142,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@9"
+                "$ref": "#/rules@15"
               },
               "arguments": []
             }
@@ -1134,7 +1168,36 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
     },
     {
       "$type": "TerminalRule",
-      "name": "BoolExpr",
+      "name": "TYPE",
+      "type": {
+        "$type": "ReturnType",
+        "name": "string"
+      },
+      "definition": {
+        "$type": "TerminalAlternatives",
+        "elements": [
+          {
+            "$type": "CharacterRange",
+            "left": {
+              "$type": "Keyword",
+              "value": "int"
+            }
+          },
+          {
+            "$type": "CharacterRange",
+            "left": {
+              "$type": "Keyword",
+              "value": "bool"
+            }
+          }
+        ]
+      },
+      "fragment": false,
+      "hidden": false
+    },
+    {
+      "$type": "TerminalRule",
+      "name": "BOOL_VALUE",
       "type": {
         "$type": "ReturnType",
         "name": "boolean"

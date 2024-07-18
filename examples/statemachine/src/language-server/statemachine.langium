@@ -21,7 +21,7 @@ State:
     'end';
 
 Transition:
-    event=[Event:ID] ('when' guard=Expr)? '=>' state=[State] ('with' actions+=Action+)?;
+    event=[Event:ID] ('when' guard=BoolExpr)? '=>' state=[State] ('with' actions+=Action+)?;
 
 // yet to include LessThan | GreaterThan | Equal | NotEqual | And | Or | Not | 
 // GuardCondition: 
@@ -34,26 +34,28 @@ PrintStatement:
     'print' '(' value=( Expr) ')';
 
 Assignment:
-    variable=[Attribute] '=' expression=Expr;
+     variable=[Attribute] '=' expression=BoolExpr | Expr;
 
 Attribute:
-    name=ID ('=' defaultValue=Expr)? ; //expression
+    name=ID ':' type=TYPE ('=' defaultValue=BoolExpr| Expr)?; // expression
+    
+// BoolExpr
+BoolExpr: Conditional;
+
+Conditional infers BoolExpr:
+    Comparison ({infer BinExpr.e1=current} op=('||' | '&&') e2=Comparison)*;
+
+Comparison infers BoolExpr:
+    BooleanPrimExpr ({infer BinExpr.e1=current} op=('<=' | '<' | '>=' |  '>' | '==' | '!=') e2=BooleanPrimExpr)*;
+
+BooleanPrimExpr: BoolLit | BoolGroup | Expr;
+BoolLit: val=BOOL_VALUE;
+BoolGroup: '(' gbe=BoolExpr ')'; 
+
+// BoolExpComp: leftExpression= Expr op=('==' | '!=' | '<' | '>' | '<=' | '>=' ) rightExpression=Expr;
 
 // Expressions
-Expr: Or; 
-
-Or infers Expr:
-    And ({infer BinExpr.e1=current} op='||' e2=And)*;
-
-And infers Expr:
-    Equality ({infer BinExpr.e1=current} op='&&' e2=Equality)*;
-
-Equality infers Expr:
-    Comparison ({infer BinExpr.e1=current} op=('==' | '!=') e2=Comparison)*;
-
-Comparison infers Expr:
-    Add ({infer BinExpr.e1=current} op=('<' | '>' | '<=' | '>=') e2=Add)*;
-
+Expr: Add; 
 Add  infers Expr: 
     Mult     ({infer BinExpr.e1=current} op=('+'|'-') e2=Mult)*;
 Mult infers Expr: 
@@ -61,14 +63,29 @@ Mult infers Expr:
 
 PrimExpr: Lit | Ref | Group | NegExpr;
 
-Lit:        val=NUMBER;
+Lit:        val=NUMBER ;
 Ref:        val=[Attribute:ID];
-Group:      '(' ge=Expr ')';    
+Group:      '(' ge=Expr  ')';    
 NegExpr:    '-' ne=Expr;
 
 hidden terminal WS: /\s+/;
-terminal BoolExpr returns boolean: 'true' | 'false';
+terminal TYPE returns string: 'int' | 'bool';
+terminal BOOL_VALUE returns boolean: 'true' | 'false';
 terminal ID: /[_a-zA-Z][\w_]*/;
 terminal NUMBER returns number: /[0-9]+(\.[0-9]*)?/;
+// terminal STRING returns string: /"([^"\\]|\\.)*"/;
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;
+
+// NonBoolExpr: AddBool; 
+// AddBool infers BoolExpr: 
+//     MultBool ({infer BinExpr.e1=current} op=('+'|'-') e2=MultBool)*;
+// MultBool infers BoolExpr: 
+//     PrimBoolExpr ({infer BinExpr.e1=current} op=('*'|'/') e2=PrimBoolExpr)*;
+
+// PrimBoolExpr: Lit | Ref | Group | NegExpr;
+
+// Lit:        val=NUMBER | BOOL_VALUE;
+// Ref:        val=[Attribute:ID];
+// Group:      '(' ge=Expr ')';    
+// NegExpr:    '-' ne=Expr;

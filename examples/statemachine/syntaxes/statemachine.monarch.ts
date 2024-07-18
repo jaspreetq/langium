@@ -4,12 +4,13 @@ export default {
         'actions','attributes','commands','end','events','initialState','print','state','statemachine','when','with'
     ],
     operators: [
-        '!=','&&','*','+','-','/','<','<=','=','==','=>','>','>=','||'
+        '!=','&&','*','+','-','/',':','<','<=','=','==','=>','>','>=','||'
     ],
-    symbols: /!=|&&|\(|\)|\*|\+|-|\/|<|<=|=|==|=>|>|>=|\{|\|\||\}/,
+    symbols: /!=|&&|\(|\)|\*|\+|-|\/|:|<|<=|=|==|=>|>|>=|\{|\|\||\}/,
 
     tokenizer: {
         initial: [
+            { regex: /(int|bool)/, action: { cases: { '@keywords': {"token":"keyword"}, '@default': {"token":"string"} }} },
             { regex: /(true|false)/, action: {"token":"boolean"} },
             { regex: /[_a-zA-Z][\w_]*/, action: { cases: { '@keywords': {"token":"keyword"}, '@default': {"token":"ID"} }} },
             { regex: /[0-9]+(\.[0-9]*)?/, action: {"token":"number"} },

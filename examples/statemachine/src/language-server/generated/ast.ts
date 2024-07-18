@@ -9,11 +9,29 @@ import { AbstractAstReflection } from 'langium';
 
 export const StatemachineTerminals = {
     WS: /\s+/,
+    TYPE: /(int|bool)/,
+    BOOL_VALUE: /(true|false)/,
     ID: /[_a-zA-Z][\w_]*/,
     NUMBER: /[0-9]+(\.[0-9]*)?/,
     ML_COMMENT: /\/\*[\s\S]*?\*\//,
     SL_COMMENT: /\/\/[^\n\r]*/,
 };
+
+export type BooleanPrimExpr = BoolGroup | BoolLit | Expr;
+
+export const BooleanPrimExpr = 'BooleanPrimExpr';
+
+export function isBooleanPrimExpr(item: unknown): item is BooleanPrimExpr {
+    return reflection.isInstance(item, BooleanPrimExpr);
+}
+
+export type BoolExpr = BinExpr | BooleanPrimExpr;
+
+export const BoolExpr = 'BoolExpr';
+
+export function isBoolExpr(item: unknown): item is BoolExpr {
+    return reflection.isInstance(item, BoolExpr);
+}
 
 export type Expr = BinExpr | PrimExpr;
 
@@ -46,8 +64,8 @@ export function isAction(item: unknown): item is Action {
 
 export interface Assignment extends AstNode {
     readonly $container: Action;
-    readonly $type: 'Assignment';
-    expression: Expr;
+    readonly $type: 'Assignment' | 'BinExpr' | 'Expr' | 'Group' | 'Lit' | 'NegExpr' | 'PrimExpr' | 'Ref';
+    expression: BoolExpr;
     variable: Reference<Attribute>;
 }
 
@@ -59,9 +77,10 @@ export function isAssignment(item: unknown): item is Assignment {
 
 export interface Attribute extends AstNode {
     readonly $container: Statemachine;
-    readonly $type: 'Attribute';
-    defaultValue?: Expr;
+    readonly $type: 'Attribute' | 'BinExpr' | 'Expr' | 'Group' | 'Lit' | 'NegExpr' | 'PrimExpr' | 'Ref';
+    defaultValue?: BoolExpr;
     name: string;
+    type: string;
 }
 
 export const Attribute = 'Attribute';
@@ -71,10 +90,10 @@ export function isAttribute(item: unknown): item is Attribute {
 }
 
 export interface BinExpr extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement | Transition;
+    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Group | NegExpr | PrintStatement | Transition;
     readonly $type: 'BinExpr';
-    e1: Expr | PrimExpr;
-    e2: Expr | PrimExpr;
+    e1: BoolExpr | BooleanPrimExpr | Expr | PrimExpr;
+    e2: BoolExpr | BooleanPrimExpr | Expr | PrimExpr;
     op: '!=' | '&&' | '*' | '+' | '-' | '/' | '<' | '<=' | '==' | '>' | '>=' | '||';
 }
 
@@ -82,6 +101,30 @@ export const BinExpr = 'BinExpr';
 
 export function isBinExpr(item: unknown): item is BinExpr {
     return reflection.isInstance(item, BinExpr);
+}
+
+export interface BoolGroup extends AstNode {
+    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Transition;
+    readonly $type: 'BoolGroup';
+    gbe: BoolExpr;
+}
+
+export const BoolGroup = 'BoolGroup';
+
+export function isBoolGroup(item: unknown): item is BoolGroup {
+    return reflection.isInstance(item, BoolGroup);
+}
+
+export interface BoolLit extends AstNode {
+    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Transition;
+    readonly $type: 'BoolLit';
+    val: boolean;
+}
+
+export const BoolLit = 'BoolLit';
+
+export function isBoolLit(item: unknown): item is BoolLit {
+    return reflection.isInstance(item, BoolLit);
 }
 
 export interface Command extends AstNode {
@@ -109,7 +152,7 @@ export function isEvent(item: unknown): item is Event {
 }
 
 export interface Group extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement | Transition;
+    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Group | NegExpr | PrintStatement | Transition;
     readonly $type: 'Group';
     ge: Expr;
 }
@@ -121,7 +164,7 @@ export function isGroup(item: unknown): item is Group {
 }
 
 export interface Lit extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement | Transition;
+    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Group | NegExpr | PrintStatement | Transition;
     readonly $type: 'Lit';
     val: number;
 }
@@ -133,7 +176,7 @@ export function isLit(item: unknown): item is Lit {
 }
 
 export interface NegExpr extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement | Transition;
+    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Group | NegExpr | PrintStatement | Transition;
     readonly $type: 'NegExpr';
     ne: Expr;
 }
@@ -157,7 +200,7 @@ export function isPrintStatement(item: unknown): item is PrintStatement {
 }
 
 export interface Ref extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | Group | NegExpr | PrintStatement | Transition;
+    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Group | NegExpr | PrintStatement | Transition;
     readonly $type: 'Ref';
     val: Reference<Attribute>;
 }
@@ -203,7 +246,7 @@ export interface Transition extends AstNode {
     readonly $type: 'Transition';
     actions: Array<Action>;
     event: Reference<Event>;
-    guard?: Expr;
+    guard?: BoolExpr;
     state: Reference<State>;
 }
 
@@ -218,6 +261,10 @@ export type StatemachineAstType = {
     Assignment: Assignment
     Attribute: Attribute
     BinExpr: BinExpr
+    BoolExpr: BoolExpr
+    BoolGroup: BoolGroup
+    BoolLit: BoolLit
+    BooleanPrimExpr: BooleanPrimExpr
     Command: Command
     Event: Event
     Expr: Expr
@@ -235,20 +282,32 @@ export type StatemachineAstType = {
 export class StatemachineAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [Action, Assignment, Attribute, BinExpr, Command, Event, Expr, Group, Lit, NegExpr, PrimExpr, PrintStatement, Ref, State, Statemachine, Transition];
+        return [Action, Assignment, Attribute, BinExpr, BoolExpr, BoolGroup, BoolLit, BooleanPrimExpr, Command, Event, Expr, Group, Lit, NegExpr, PrimExpr, PrintStatement, Ref, State, Statemachine, Transition];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
         switch (subtype) {
-            case BinExpr:
-            case PrimExpr: {
-                return this.isSubtype(Expr, supertype);
+            case BinExpr: {
+                return this.isSubtype(BoolExpr, supertype) || this.isSubtype(Expr, supertype);
+            }
+            case BooleanPrimExpr: {
+                return this.isSubtype(BoolExpr, supertype);
+            }
+            case BoolGroup:
+            case BoolLit: {
+                return this.isSubtype(BooleanPrimExpr, supertype);
+            }
+            case Expr: {
+                return this.isSubtype(Assignment, supertype) || this.isSubtype(Attribute, supertype) || this.isSubtype(BooleanPrimExpr, supertype);
             }
             case Group:
             case Lit:
             case NegExpr:
             case Ref: {
                 return this.isSubtype(PrimExpr, supertype);
+            }
+            case PrimExpr: {
+                return this.isSubtype(Expr, supertype);
             }
             default: {
                 return false;
@@ -301,7 +360,8 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                     name: Attribute,
                     properties: [
                         { name: 'defaultValue' },
-                        { name: 'name' }
+                        { name: 'name' },
+                        { name: 'type' }
                     ]
                 };
             }
@@ -312,6 +372,22 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                         { name: 'e1' },
                         { name: 'e2' },
                         { name: 'op' }
+                    ]
+                };
+            }
+            case BoolGroup: {
+                return {
+                    name: BoolGroup,
+                    properties: [
+                        { name: 'gbe' }
+                    ]
+                };
+            }
+            case BoolLit: {
+                return {
+                    name: BoolLit,
+                    properties: [
+                        { name: 'val', defaultValue: false }
                     ]
                 };
             }

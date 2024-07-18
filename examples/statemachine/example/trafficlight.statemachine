@@ -4,18 +4,19 @@ events
     switchCapacity
     next
 
-attributes 
-    u = 1
-    cnt = 12 - (2 > u)
+attributes
+    cnt : int = 23*0 + 3/3
+    isEmpty : bool = (12-32*30) > 9+8
+    checkDefault : bool = true
 
 initialState PowerOff
 
 state PowerOff
-    switchCapacity => RedLight
+    switchCapacity when false => RedLight
 end
 
 state RedLight
-    switchCapacity when 2 > 10 => PowerOff      
+    switchCapacity when (((12-32*30) < 9+8) || (23 < 0)) => PowerOff
     next => GreenLight
 end
 
