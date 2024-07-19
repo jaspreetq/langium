@@ -91,7 +91,10 @@ public:
 
         void PowerOff::switchCapacity() {
             if(true) {
-                
+                std::cout << (statemachine->cnt > 10) << std::endl;
+statemachine->cnt = 1;
+std::cout << statemachine->cnt << std::endl;
+std::cout << (statemachine->isEmpty && statemachine->checkDefault) << std::endl;
                 statemachine->transition_to(new RedLight);
             } else {
                 std::cout << "Transition not allowed." << std::endl;
@@ -101,7 +104,7 @@ public:
 // RedLight
 
         void RedLight::switchCapacity() {
-            if((((12 - (32 * 30)) > (9 + 8)) || (statemachine->cnt < 0))) {
+            if(((12 - (32 * 30)) > statemachine->cnt)) {
                 
                 statemachine->transition_to(new PowerOff);
             } else {
@@ -170,12 +173,6 @@ int main() {
     static std::map<std::string, Event> event_by_name;
     event_by_name["switchCapacity"] = &TrafficLight::switchCapacity;
     event_by_name["next"] = &TrafficLight::next;
-    int cnt = 0;
-    std::cout << "cnt: " << "0" << std::endl;
-    bool isEmpty = false;
-    std::cout << "isEmpty: " << "false" << std::endl;
-    bool checkDefault = false;
-    std::cout << "checkDefault: " << "false" << std::endl;
     for (std::string input; std::getline(std::cin, input);) {
         std::map<std::string, Event>::const_iterator event_by_name_it = event_by_name.find(input);
         if (event_by_name_it == event_by_name.end()) {

@@ -104,7 +104,7 @@ export function isBinExpr(item: unknown): item is BinExpr {
 }
 
 export interface BoolGroup extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Transition;
+    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | PrintStatement | Transition;
     readonly $type: 'BoolGroup';
     gbe: BoolExpr;
 }
@@ -116,7 +116,7 @@ export function isBoolGroup(item: unknown): item is BoolGroup {
 }
 
 export interface BoolLit extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Transition;
+    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | PrintStatement | Transition;
     readonly $type: 'BoolLit';
     val: boolean;
 }
@@ -128,7 +128,7 @@ export function isBoolLit(item: unknown): item is BoolLit {
 }
 
 export interface BoolRef extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Transition;
+    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | PrintStatement | Transition;
     readonly $type: 'BoolRef';
     val: Reference<Attribute>;
 }
@@ -202,7 +202,7 @@ export function isNegExpr(item: unknown): item is NegExpr {
 export interface PrintStatement extends AstNode {
     readonly $container: Action;
     readonly $type: 'PrintStatement';
-    value: Expr;
+    value: BoolExpr | Expr;
 }
 
 export const PrintStatement = 'PrintStatement';

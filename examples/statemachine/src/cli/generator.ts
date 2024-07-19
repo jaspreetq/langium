@@ -14,7 +14,7 @@ import { extractDestinationAndName } from './cli-util.js';
 // For precise white space handling in generation template
 // we suggest you to enable the display of white space characters in your editor.
 // In VS Code execute the 'Toggle Render Whitespace' command, for example.
-type StatemachineEnv = Map<string, number | boolean>;
+type StatemachineEnv = Map<string, number | boolean | undefined>;
 // set map type to <string, E> where E is number or boolean
 
 export function generateCpp(statemachine: Statemachine, filePath: string, destination: string | undefined): string {
@@ -194,7 +194,7 @@ function evalExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): number {//
 function evalBoolExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): boolean | number {
     if (isBoolLit(e)) {
         return e.val ?? false;
-    } else if (isRef(e)) {
+    } else if (isBoolRef(e)) {
         const v = env.get(e.val.ref?.name ?? '');
         if (v != undefined) {
             return v;
@@ -206,36 +206,41 @@ function evalBoolExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): boolean 
         let opval = e.op;
         let v1 = evalBoolExprWithEnv(e.e1, env);
         let v2 = evalBoolExprWithEnv(e.e2, env);
+        if ((typeof v1 === 'number' && typeof v2 === 'number' && (opval === '/' || opval === '*' || opval === '+' || opval === '-' || opval === '==' || opval === '!=' || opval === '<' || opval === '>' || opval === '<=' || opval === '>='))) {
+            switch (opval) {
+                case '<': return v1 < v2;
+                case '>': return v1 > v2;
+                case '<=': return v1 <= v2;
+                case '>=': return v1 >= v2;
+                case '==': return v1 === v2;
+                case '!=': return v1 !== v2;
+                case '/': return v1 / v2;
+                case '*': return v1 * v2;
+                case '+': return v1 + v2;
+                case '-': return v1 - v2;
+                default: throw new Error(`Unrecognized bin op passed: ${opval}`);
+            }
 
-        switch (opval) {
-            case '<': return v1 < v2;
-            case '>': return v1 > v2;
-            case '<=': return v1 <= v2;
-            case '>=': return v1 >= v2;
-            case '==': return v1 === v2;
-            case '!=': return v1 !== v2;
-            case '||': return v1 || v2;
-            case '&&': return v1 && v2;
-            case '/':
-            case '*':
-            case '+':
-            case '-': break;
-            default: throw new Error(`Unrecognized bin op passed: ${opval}`);
-        }
-
-        if (opval === '/' || opval === '*' || opval === '+' || opval === '-') {
-            return evalExprWithEnv(e, env);
+        } else if (typeof v1 === 'boolean' && typeof v2 === 'boolean' && (opval === '||' || opval === '&&')) {
+            switch (opval) {
+                case '||': return v1 || v2;
+                case '&&': return v1 && v2;
+                default: throw new Error(`Unrecognized bin op passed: ${opval}`);
+            }
+        } else {
+            throw new Error(`Unrecognized bin op passed: ${opval}`);
         }
     } else if (isExpr(e)) {
         return evalExprWithEnv(e, env);
     }
-
 
     throw new Error('Unhandled Boolean Expression: ' + e);
 }
 
 function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv): Generated {
     // attribute.defaultValue =
+    const defaultValue = attribute.type === 'int' ? 0 : attribute.type === 'bool' ? false : undefined;
+    env.set(attribute.name, defaultValue);  // Store the default value in the environment
     return toNode`
                     ${attribute.type} ${attribute.name};
         `;
@@ -267,15 +272,21 @@ function generateStateDefinition(ctx: GeneratorContext, state: State, env: State
 function generateAction(action: Action, env: StatemachineEnv): string {
     if (action.assignment) {
         const value = evalExprWithEnv(action.assignment.value, env);
-        return `${action.assignment.variable.$refText} = ${value};`;
+        env.set(action.assignment.variable.$refText, value);
+        return `statemachine->${action.assignment.variable.$refText} = ${value};`;
     } else if (action.print) {
-        const value = evalExprWithEnv(action.print.value, env);
+        const value = convertBoolExprToString(action.print.value, env);
         return `std::cout << ${value} << std::endl;`;
     }
     return '';
 }
 
 function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv): string {
+    if (isBoolExpr(e)) {
+        evalBoolExprWithEnv(e, env);
+    } else if (isExpr(e)) {
+        evalExprWithEnv(e, env);
+    }
     if (isLit(e)) {
         return e.val.toString();
     } else if (isRef(e)) {
@@ -346,31 +357,31 @@ function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv): stri
 //         ${attribute.type} ${attribute.name};
 //     `;
 // }
-function generateAttributeInitialization(attribute: Attribute, env: StatemachineEnv): Generated {
-    if (attribute.type !== 'bool' && attribute.type !== 'int') {
-        throw new Error(`Unsupported type ${attribute.type}`);
-    } else if (attribute.defaultValue && attribute.type === 'bool') {
-        const defaultValue = evalBoolExprWithEnv(attribute.defaultValue, env);
-        if (typeof defaultValue !== 'boolean') {
-            throw new Error(`value for attribute '${attribute.name}' is not a boolean.`);
-        }
-        env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
+// function generateAttributeInitialization(attribute: Attribute, env: StatemachineEnv): Generated {
+//     if (attribute.type !== 'bool' && attribute.type !== 'int') {
+//         throw new Error(`Unsupported type ${attribute.type}`);
+//     } else if (attribute.defaultValue && attribute.type === 'bool') {
+//         const defaultValue = evalBoolExprWithEnv(attribute.defaultValue, env);
+//         if (typeof defaultValue !== 'boolean') {
+//             throw new Error(`value for attribute '${attribute.name}' is not a boolean.`);
+//         }
+//         env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
 
-    } else if (attribute.defaultValue && attribute.type === 'int') {
-        const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
-        if (typeof defaultValue !== 'number') {
-            throw new Error(`value for attribute '${attribute.name}' is not a boolean.`);
-        }
-        env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
-    }
-    // Default initialization based on attribute type
-    const defaultInitValue = attribute.type === 'int' ? 0 : false;
-    env.set(attribute.name, defaultInitValue);  // Store the default value in the environment
-    return toNode`
-        ${attribute.type} ${attribute.name} = ${defaultInitValue};
-        std::cout << "${attribute.name}: " << "${env.get(attribute.name)}" << std::endl;
-    `;
-}
+//     } else if (attribute.defaultValue && attribute.type === 'int') {
+//         const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
+//         if (typeof defaultValue !== 'number') {
+//             throw new Error(`value for attribute '${attribute.name}' is not a boolean.`);
+//         }
+//         env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
+//     }
+//     // Default initialization based on attribute type
+//     const defaultInitValue = attribute.type === 'int' ? 0 : false;
+//     env.set(attribute.name, defaultInitValue);  // Store the default value in the environment
+//     return toNode`
+//         ${attribute.type} ${attribute.name} = ${defaultInitValue};
+//         std::cout << "${attribute.name}: " << "${env.get(attribute.name)}" << std::endl;
+//     `;
+// }
 
 
 // if (attribute.defaultValue) {
@@ -489,9 +500,6 @@ function generateMain(ctx: GeneratorContext, env: StatemachineEnv): Generated {
 
             static std::map<std::string, Event> event_by_name;
             ${joinWithExtraNL(ctx.statemachine.events, event => `event_by_name["${event.name}"] = &${ctx.statemachine.name}::${event.name};`)}
-            ${joinWithExtraNL(ctx.statemachine.attributes, attribute => toNode`
-                ${generateAttributeInitialization(attribute, env)}
-            `)}
             for (std::string input; std::getline(std::cin, input);) {
                 std::map<std::string, Event>::const_iterator event_by_name_it = event_by_name.find(input);
                 if (event_by_name_it == event_by_name.end()) {

@@ -32,7 +32,7 @@ Action:
     assignment=Assignment | print=PrintStatement;
 
 PrintStatement:     
-    'print' '(' value=( Expr) ')';
+    'print' '(' value=(BoolExpr|Expr) ')';
 
 Assignment:
      variable=[Attribute] '=' value=BoolExpr | Expr;

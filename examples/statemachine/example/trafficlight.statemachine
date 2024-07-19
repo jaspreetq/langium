@@ -12,11 +12,16 @@ attributes
 initialState PowerOff
 
 state PowerOff
-    switchCapacity when true => RedLight
+    switchCapacity when true => RedLight 
+    with 
+        print(cnt > 10)
+        cnt = cnt + 1 
+        print(cnt)
+        print(isEmpty && checkDefault)
 end
 
 state RedLight
-    switchCapacity when (((12-32*30) > 9+8) || (cnt < 0)) => PowerOff
+    switchCapacity when ((12-32*30) > cnt) => PowerOff
     next => GreenLight
 end
 
