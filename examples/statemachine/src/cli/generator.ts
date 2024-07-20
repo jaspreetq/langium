@@ -148,7 +148,10 @@ function generateStateDeclaration(ctx: GeneratorContext, state: State): Generate
     `;
 }
 
-function evalExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): number {//
+function evalExprWithEnv(e: BoolExpr | Expr | undefined, env: StatemachineEnv): number {//
+    if (e === undefined) {
+        throw new Error('Undefined expression');
+    }
     if (isLit(e)) {
         return e.val;
 
@@ -191,7 +194,7 @@ function evalExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): number {//
 
 }
 
-function evalBoolExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): boolean | number {
+function evalBoolExprWithEnv(e: BoolExpr | Expr | undefined, env: StatemachineEnv): boolean | number {
     if (isBoolLit(e)) {
         return e.val ?? false;
     } else if (isBoolRef(e)) {
@@ -238,17 +241,33 @@ function evalBoolExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): boolean 
 }
 
 function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv): Generated {
-    // attribute.defaultValue =
-    const defaultValue = attribute.type === 'int' ? 0 : attribute.type === 'bool' ? false : undefined;
-    env.set(attribute.name, defaultValue);  // Store the default value in the environment
+    const defaultValue = attribute.type === 'int' ? 0 : false;
+
+    if (attribute.type !== 'int' && attribute.type !== 'bool') {
+        throw new Error(`Unsupported attribute type: ${attribute.type}`);
+    }
+
+    if (attribute.defaultValue === undefined) {
+        env.set(attribute.name, defaultValue);
+        return toNode`
+                        ${attribute.type} ${attribute.name} = ${defaultValue};
+            `;
+    }
+    const defaultValueExprValue = attribute.type === 'int' ? evalExprWithEnv(attribute.defaultValue, env) : evalBoolExprWithEnv(attribute.defaultValue, env);
+
+    if ((attribute.type === 'int' && typeof defaultValueExprValue !== 'number') || (attribute.type === 'bool' && typeof defaultValueExprValue !== 'boolean')) {
+        throw new Error(`Default value for attribute '${attribute.name}' is not of type ${attribute.type}.`);
+    }
+    const defaultValueString = convertBoolExprToString(attribute.defaultValue, env, '')
+    env.set(attribute.name, defaultValueExprValue);
     return toNode`
-                    ${attribute.type} ${attribute.name};
+                    ${attribute.type} ${attribute.name} = ${defaultValueString};
         `;
 }
 
 function generateStateDefinition(ctx: GeneratorContext, state: State, env: StatemachineEnv): Generated {
     const transitionsCode = state.transitions.map(transition => {
-        const guardCondition = transition.guard != undefined ? convertBoolExprToString(transition.guard, env) : "true";
+        const guardCondition = transition.guard != undefined ? convertBoolExprToString(transition.guard, env, 'statemachine->') : "true";
         const actionsCode = transition.actions.map(action => generateAction(action, env)).join('\n');
 
         return `
@@ -271,17 +290,27 @@ function generateStateDefinition(ctx: GeneratorContext, state: State, env: State
 
 function generateAction(action: Action, env: StatemachineEnv): string {
     if (action.assignment) {
-        const value = evalExprWithEnv(action.assignment.value, env);
+        const varType = action.assignment.variable?.ref?.type;
+        if (varType !== 'bool' && varType !== 'int') {
+            throw new Error(`Unsupported type ${varType}`);
+        }
+        const valueString = convertBoolExprToString(action.assignment.value, env, 'statemachine->');
+        let value;
+        if (varType === 'int') {
+            value = evalExprWithEnv(action.assignment.value, env);
+        } else {
+            value = evalBoolExprWithEnv(action.assignment.value, env);
+        }
         env.set(action.assignment.variable.$refText, value);
-        return `statemachine->${action.assignment.variable.$refText} = ${value};`;
+        return `statemachine->${action.assignment.variable.$refText} = ${valueString};`;
     } else if (action.print) {
-        const value = convertBoolExprToString(action.print.value, env);
+        const value = convertBoolExprToString(action.print.value, env, 'statemachine->');
         return `std::cout << ${value} << std::endl;`;
     }
     return '';
 }
 
-function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv): string {
+function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv, refString: string): string {
     if (isBoolExpr(e)) {
         evalBoolExprWithEnv(e, env);
     } else if (isExpr(e)) {
@@ -290,28 +319,26 @@ function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv): stri
     if (isLit(e)) {
         return e.val.toString();
     } else if (isRef(e)) {
-        return 'statemachine->' + e.val.ref?.name ?? '';
+        return refString + e.val.ref?.name ?? '';
     } else if (isBinExpr(e)) {
         let op = e.op;
-        let left = convertBoolExprToString(e.e1, env);
-        let right = convertBoolExprToString(e.e2, env);
+        let left = convertBoolExprToString(e.e1, env, refString);
+        let right = convertBoolExprToString(e.e2, env, refString);
         return `(${left} ${op} ${right})`;
     } else if (isNegExpr(e)) {
-        let expr = convertBoolExprToString(e.ne, env);
+        let expr = convertBoolExprToString(e.ne, env, refString);
         return `-${expr}`;
     } else if (isGroup(e)) {
-        let expr = convertBoolExprToString(e.ge, env);
+        let expr = convertBoolExprToString(e.ge, env, refString);
         return `(${expr})`;
     } else if (isBoolLit(e)) {
         return e.val.toString();
     } else if (isBoolGroup(e)) {
-        return convertBoolExprToString(e.gbe, env);
+        return convertBoolExprToString(e.gbe, env, refString);
     } else if (isExpr(e)) {
         return evalExprWithEnv(e, env).toString();
     } else if (isBoolRef(e)) {
-        return 'statemachine->' + e.val.ref?.name ?? '';
-    } else if (e === undefined) {
-        return 'true';
+        return refString + e.val.ref?.name ?? '';
     }
     throw new Error('Unhandled Expression: ' + e);
 }

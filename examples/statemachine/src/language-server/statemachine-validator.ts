@@ -5,7 +5,7 @@
  ******************************************************************************/
 
 import type { ValidationAcceptor, ValidationChecks } from 'langium';
-import { type State, type Statemachine, type StatemachineAstType, type Event, type Attribute, isBoolExpr, isExpr } from './generated/ast.js';
+import { type State, type Statemachine, type StatemachineAstType, type Event, type Attribute, isExpr, isBoolExpr, BoolLit } from './generated/ast.js';
 import type { StatemachineServices } from './statemachine-module.js';
 import { MultiMap } from 'langium';
 
@@ -77,7 +77,7 @@ export class StatemachineValidator {
     }
 
     checkAttributeTypeConsistency(attribute: Attribute, accept: ValidationAcceptor): void {
-        if (attribute.defaultValue) {
+        if (attribute) {
             const type = attribute.type;
             const defaultValue = attribute.defaultValue;
             const isBooleanValue = isBoolExpr(defaultValue);
@@ -90,18 +90,18 @@ export class StatemachineValidator {
             }
         }
     }
-    // matchAttributeTypeWithValues(attribute: Attribute, accept: ValidationAcceptor): void {
-    //     if (attribute.type) {
-    //         const type = attribute.type;
-    //         if (type === 'int') {
-    //             if (attribute.defaultValue && isNaN(+attribute.defaultValue)) {
-    //                 accept('error', `Attribute value does not match the type: ${attribute.defaultValue}`, { node: attribute, property: 'defaultValue' });
-    //             }
-    //         } else if (type === 'boolean') {
-    //             if (attribute.defaultValue?.$type !== BoolLit) {
-    //                 accept('error', `Attribute value does not match the type: ${attribute.defaultValue}`, { node: attribute, property: 'defaultValue' });
-    //             }
-    //         }
-    //     }
-    // }
+    matchAttributeTypeWithValues(attribute: Attribute, accept: ValidationAcceptor): void {
+        if (attribute.type) {
+            const type = attribute.type;
+            if (type === 'int') {
+                if (attribute.defaultValue && isNaN(+attribute.defaultValue)) {
+                    accept('error', `Attribute value does not match the type: ${attribute.defaultValue}`, { node: attribute, property: 'defaultValue' });
+                }
+            } else if (type === 'boolean') {
+                if (attribute.defaultValue?.$type !== BoolLit) {
+                    accept('error', `Attribute value does not match the type: ${attribute.defaultValue}`, { node: attribute, property: 'defaultValue' });
+                }
+            }
+        }
+    }
 }

@@ -5,9 +5,9 @@ events
     next
 
 attributes
-    cnt : int = 23*0 + 3/3
-    isEmpty : bool = (12-32*30) > 9+8
-    checkDefault : bool = true
+    cnt : int = 13 - 4 + (2*3) + 5/4
+    isEmpty : bool = (cnt > 10) && (cnt < 20)
+    checkDefault : bool
 
 initialState PowerOff
 
@@ -15,7 +15,7 @@ state PowerOff
     switchCapacity when true => RedLight 
     with 
         print(cnt > 10)
-        cnt = cnt + 1 
+        cnt = cnt + 1 + 20*(cnt+1) 
         print(cnt)
         print(isEmpty && checkDefault)
 end

@@ -77,8 +77,8 @@ export function isAssignment(item: unknown): item is Assignment {
 
 export interface Attribute extends AstNode {
     readonly $container: Statemachine;
-    readonly $type: 'Attribute' | 'BinExpr' | 'Expr' | 'Group' | 'Lit' | 'NegExpr' | 'PrimExpr' | 'Ref';
-    defaultValue?: BoolExpr;
+    readonly $type: 'Attribute';
+    defaultValue?: BoolExpr | Expr;
     name: string;
     type: string;
 }
@@ -313,7 +313,7 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                 return this.isSubtype(BooleanPrimExpr, supertype);
             }
             case Expr: {
-                return this.isSubtype(Assignment, supertype) || this.isSubtype(Attribute, supertype) || this.isSubtype(BooleanPrimExpr, supertype);
+                return this.isSubtype(Assignment, supertype) || this.isSubtype(BooleanPrimExpr, supertype);
             }
             case Group:
             case Lit:

@@ -38,7 +38,7 @@ Assignment:
      variable=[Attribute] '=' value=BoolExpr | Expr;
 
 Attribute:
-    name=ID ':' type=TYPE ('=' defaultValue=BoolExpr| Expr)?; // expression
+    name=ID ':' type=TYPE ('=' defaultValue=(BoolExpr|Expr))?; // expression
     
 // BoolExpr
 BoolExpr: Conditional;
