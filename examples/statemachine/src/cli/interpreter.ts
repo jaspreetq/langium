@@ -1,332 +1,493 @@
-// import { Model, State, Event, Transition, Action, PrintStatement, Assignment, BoolExpr, Expr, Attribute, isLit, isRef, isBinExpr, isNegExpr, isGroup, isPrintStatement, isAssignment } from '../language-server/generated/ast.js';
+import { Attribute, Command, Event } from './../language-server/generated/ast.js';
+import { State, Transition, Action, BoolExpr, Expr, isLit, isRef, isBoolLit, isBoolRef, isBoolGroup, isBinExpr, isNegExpr, isGroup, isBoolExpr } from '../language-server/generated/ast.js';
 
-// // Type for Statemachine environment
-// type StatemachineEnv = {
-//     [key: string]: any;
-// };
+export type StatemachineEnv = Map<string, number | boolean | undefined>;
+export const env: StatemachineEnv = new Map();
 
-// // Initialize environment with default attribute values
-// function initEnv(model: Model): StatemachineEnv {
-//     const env: StatemachineEnv = {};
+interface ExecutionContext {
+    currentState: State | undefined;
+    events: Event[];
+    commands: Command[];
+    env: StatemachineEnv;
+    Attributes: Attribute[];
+    states: State[];
+}
+
+// function extractAttributes(model: any): StatemachineEnv {
+//     const attributes = new Map();
 //     if (model.attributes) {
-//         model.attributes.forEach(attr => {
-//             env[attr.name] = getDefault(attr.type);
+//         model.attributes.forEach((attribute: any) => {
+//             const name = attribute.name;
+//             const defaultValue = attribute.defaultValue ? evalBoolExprWithEnv(attribute.defaultValue, attributes) : undefined;
+//             attributes.set(name, defaultValue);
 //         });
 //     }
-//     return env;
+//     return attributes;
 // }
 
-// // Helper to get default values for types
-// function getDefault(type: string): any {
-//     if (type === 'int') return 0;
-//     if (type === 'bool') return false;
-//     throw new Error(`Unknown type: ${type}`);
-// }
-
-// // Interpret the statemachine model
-// export function interpretStatemachine(model: Model): void {
-//     const env = initEnv(model);
-//     const initialState = model.states.find(state => state.name === model.init.name);
-//     if (!initialState) {
-//         throw new Error(`Initial state '${model.init.name}' not found`);
+// function extractInitialState(model: any): any {
+//     if (model.init && model.init.$ref) {
+//         const stateRef = model.init.$ref;
+//         return resolveReference(stateRef, model.states);
 //     }
-//     runState(initialState, env, model.events);
+//     throw new Error("Initial state is undefined.");
 // }
 
-// // Run a state and process its transitions
-// function runState(state: State, env: StatemachineEnv, events: Event[]): void {
-//     console.log(`Entering state: ${state.name}`);
-//     processActions(state.actions, env);
-
-//     const event = getEvent(events, state.transitions);
-//     if (event) {
-//         const transition = state.transitions.find(trans => trans.event.name === event.name);
-//         if (transition) {
-//             const guard = transition.guard;
-//             if (!guard || evalBoolExpr(guard, env)) {
-//                 const nextState = transition.state.ref;
-//                 if (nextState) {
-//                     runState(nextState, env, events);
-//                 } else {
-//                     throw new Error(`Next state '${transition.state.$refText}' not found`);
-//                 }
-//             } else {
-//                 console.log('Transition not allowed.');
-//             }
-//         }
+// function extractStatesAndTransitions(model: any): Map<string, any> {
+//     const states = new Map();
+//     if (model.states) {
+//         model.states.forEach((state: any) => {
+//             const stateName = state.name;
+//             const transitions = state.transitions.map((transition: any) => {
+//                 return {
+//                     event: transition.event.$refText,
+//                     guard: transition.guard,
+//                     actions: transition.actions,
+//                     targetState: resolveReference(transition.state.$ref, model.states)
+//                 };
+//             });
+//             states.set(stateName, { transitions });
+//         });
 //     }
+//     return states;
 // }
 
-// // Get an event to process based on available transitions
-// function getEvent(events: Event[], transitions: Transition[]): Event | undefined {
-//     // Placeholder for event handling logic
-//     return events.length ? events[0] : undefined;
+// function resolveReference(ref: string, collection: any): any {
+//     const refIndex = parseInt(ref.split('@')[1]);
+//     return collection[refIndex];
 // }
 
-// // Process actions in a state
-// function processActions(actions: Action[], env: StatemachineEnv): void {
-//     actions.forEach(action => {
-//         if (isPrintStatement(action)) {
-//             console.log(evalExpr(action.value, env));
-//         } else if (isAssignment(action)) {
-//             env[action.variable.name] = evalExpr(action.value, env);
-//         }
-//     });
+export function evalExprWithEnv(e: BoolExpr | Expr | undefined, env: StatemachineEnv): number {
+    if (e === undefined) {
+        throw new Error('Undefined expression');
+    }
+    if (isLit(e)) {
+        return e.val;
+    } else if (isRef(e)) {
+        const v = env.get(e.val.ref?.name ?? '');
+        if (typeof v === 'boolean') {
+            throw new Error(e.val.error?.message ?? `Boolean attribute being accessed in a non-boolean expression.`);
+        } else if (v !== undefined) {
+            return v;
+        }
+        throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
+    } else if (isBinExpr(e)) {
+        let opval = e.op;
+        let v1 = evalExprWithEnv(e.e1, env);
+        let v2 = evalExprWithEnv(e.e2, env);
+
+        switch (opval) {
+            case '+': return v1 + v2;
+            case '-': return v1 - v2;
+            case '*': return v1 * v2;
+            case '/': return v1 / v2;
+            default: throw new Error(`Unrecognized bin op passed: ${opval}`);
+        }
+    } else if (isNegExpr(e)) {
+        return -1 * evalExprWithEnv(e.ne, env);
+    } else if (isGroup(e)) {
+        return evalExprWithEnv(e.ge, env);
+    } else if (isBoolExpr(e)) {
+        if (isBoolLit(e) || isBoolRef(e)) {
+            throw new Error('Unhandled Expression: ' + e);
+        } else if (isBoolGroup(e)) {
+            return evalExprWithEnv(e.gbe, env);
+        }
+    }
+    throw new Error('Unhandled Expression: ' + e);
+}
+
+export function evalBoolExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): boolean | number {
+    if (e === undefined) {
+        throw new Error('Undefined expression');
+    } else if (isBoolLit(e)) {
+        return e.val ?? false;
+    } else if (isBoolRef(e)) {
+        const v = env.get(e.val.ref?.name ?? '');
+        if (v !== undefined) {
+            return v;
+        }
+        throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
+    } else if (isBoolGroup(e)) {
+        return evalBoolExprWithEnv(e.gbe, env);
+    } else if (isBinExpr(e)) {
+        let opval = e.op;
+        let v1 = evalBoolExprWithEnv(e.e1, env);
+        let v2 = evalBoolExprWithEnv(e.e2, env);
+        const leftType = typeof v1;
+        const rightType = typeof v2;
+        if (leftType != rightType) {
+            throw new Error(`Type mismatch: ${leftType} ${e.op} ${rightType}`);
+        }
+        if (e.op === '||' || e.op === '&&') {
+            if (leftType !== 'boolean' || rightType !== 'boolean') {
+                throw new Error(`Invalid types for boolean operation: ${leftType} ${e.op} ${rightType}`);
+            }
+            return e.op === '||' ? v1 || v2 : v1 && v2;
+        }
+        if (e.op === '!=' || e.op === '==') {
+            if (leftType === 'boolean' && rightType === 'boolean') {
+                return e.op === '==' ? v1 === v2 : v1 !== v2;
+            }
+        }
+        if ((typeof v1 === 'number' && typeof v2 === 'number' && (['<', '>', '<=', '>=', '==', '!=', '/', '*', '+', '-'].includes(opval)))) {
+            switch (opval) {
+                case '<': return v1 < v2;
+                case '>': return v1 > v2;
+                case '<=': return v1 <= v2;
+                case '>=': return v1 >= v2;
+                case '==': return v1 === v2;
+                case '!=': return v1 !== v2;
+                case '/': return v1 / v2;
+                case '*': return v1 * v2;
+                case '+': return v1 + v2;
+                case '-': return v1 - v2;
+                default: throw new Error(`Unrecognized bin op passed: ${opval}`);
+            }
+        } else {
+            throw new Error(`Unrecognized bin op passed: ${opval}`);
+        }
+    } else if (isNegExpr(e) || isGroup(e) || isLit(e) || isRef(e)) {
+        return evalExprWithEnv(e, env);
+    }
+    throw new Error('Unhandled Boolean Expression: ' + e);
+}
+
+function executeAction(action: Action, context: ExecutionContext): void {
+    if (action.assignment) {
+        const variableName = action.assignment.variable.ref?.name;
+        if (variableName) {
+            const value = evalBoolExprWithEnv(action.assignment.value as BoolExpr, context.env);
+            context.env.set(variableName, value);
+        }
+    } else if (action.print) {
+        const value = action.print.value;
+        if (value) {
+            console.log(evalBoolExprWithEnv(value as BoolExpr, context.env));
+        }
+    } else if (action.command) {
+        // Execute the command logic, assuming it is properly implemented elsewhere
+        console.log(`Executing command: ${action.command.ref?.name}`);
+    }
+}
+
+function executeTransition(transition: Transition, context: ExecutionContext): void {
+    if (transition.guard && !evalBoolExprWithEnv(transition.guard, context.env)) {
+        return;
+    }
+    transition.actions.forEach(action => executeAction(action, context));
+    context.currentState = transition.state.ref;
+}
+
+function handleEvents(context: ExecutionContext): void {
+    while (context.events.length > 0 && context.currentState) {
+        const event = context.events.shift();
+        if (event) {
+            for (const transition of context.currentState.transitions) {
+                if (transition.event.ref?.name === event.name) {
+                    executeTransition(transition, context);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+function interpretModel(model: any) {
+
+    const attributes = model?.attributes?.map((attribute: any) => {
+        return {
+            name: attribute.name,
+            type: attribute.type,
+            defaultValue: attribute.defaultValue
+        }
+    });
+    const events = model?.events?.map((event: any) => {
+        return {
+            name: event.name,
+        }
+    });
+
+    const commands = model?.commands?.map((command: any) => { return { name: command.name } });
+    const states = model?.states?.map((state: any) => {
+        return {
+            name: state?.name,
+            transitions: state?.transitions,
+            actions: state?.actions
+        }
+    });
+    const initialState = states[0];
+    return {
+        attributes,
+        events,
+        commands,
+        initialState,
+        states
+    };
+}
+
+
+export function interpretStatemachine(model: any): void {
+    const interpretedModel = interpretModel(model);
+    interpretedModel?.attributes?.forEach((attribute: any) => { env.set(attribute.name, attribute.defaultValue) });
+    const context: ExecutionContext = {
+        currentState: interpretedModel.initialState,
+        events: interpretedModel.events, // Populate this as needed
+        env: env,
+        commands: interpretedModel.commands,
+        Attributes: interpretedModel.attributes,
+        states: interpretedModel.states
+
+    };
+    console.log(" guard " + context.currentState?.transitions[0].guard?.$type);
+    if (!context.currentState) {
+        throw new Error("Initial state is undefined.");
+    }
+
+    // Example of event injection
+
+    while (context.currentState) {
+        handleEvents(context);
+        // Additional logic to prevent infinite loops and manage state
+    }
+}
+
+
+
+// function extractAttributes(model: any): StatemachineEnv {
+//     const attributes = new Map();
+//     if (model.attributes) {
+//         model.attributes.forEach((attribute: any) => {
+//             const name = attribute.name;
+//             const defaultValue = attribute.defaultValue ? evaluateExpression(attribute.defaultValue) : undefined;
+//             attributes.set(name, defaultValue);
+//         });
+//     }
+//     return attributes;
 // }
 
-// // Evaluate boolean expressions
-// function evalBoolExpr(expr: BoolExpr, env: StatemachineEnv): boolean {
-//     // Add your evaluation logic here
-//     return true;
+// function extractInitialState(model: any): any {
+//     if (model.init && model.init.$ref) {
+//         const stateRef = model.init.$ref;
+//         return resolveReference(stateRef, model.states);
+//     }
+//     throw new Error("Initial state is undefined.");
 // }
 
-// // Evaluate expressions
-// function evalExpr(expr: Expr, env: StatemachineEnv): any {
-//     if (isLit(expr)) {
+// function extractStatesAndTransitions(model: any): Map<string, any> {
+//     const states = new Map();
+//     if (model.states) {
+//         model.states.forEach((state: any) => {
+//             const stateName = state.name;
+//             const transitions = state.transitions.map((transition: any) => {
+//                 return {
+//                     event: transition.event.$refText,
+//                     guard: transition.guard,
+//                     actions: transition.actions,
+//                     targetState: resolveReference(transition.state.$ref, model.states)
+//                 };
+//             });
+//             states.set(stateName, { transitions });
+//         });
+//     }
+//     return states;
+// }
+
+// function resolveReference(ref: string, collection: any): any {
+//     const refIndex = parseInt(ref.split('@')[1]);
+//     return collection[refIndex];
+// }
+
+// function evaluateExpression(expr: any): any {
+//     if (expr.$type === 'Lit') {
 //         return expr.val;
-//     } else if (isRef(expr)) {
-//         return env[expr.val.name];
-//     } else if (isBinExpr(expr)) {
-//         const left = evalExpr(expr.e1, env);
-//         const right = evalExpr(expr.e2, env);
+//     } else if (expr.$type === 'NegExpr') {
+//         return -evaluateExpression(expr.ne);
+//     } else if (expr.$type === 'BinExpr') {
+//         const left = evaluateExpression(expr.e1);
+//         const right = evaluateExpression(expr.e2);
 //         switch (expr.op) {
 //             case '+': return left + right;
 //             case '-': return left - right;
 //             case '*': return left * right;
 //             case '/': return left / right;
-//             default: throw new Error(`Unknown operator: ${expr.op}`);
+//             default: throw new Error(`Unsupported binary operator: ${expr.op}`);
 //         }
-//     } else if (isNegExpr(expr)) {
-//         return -evalExpr(expr.ne, env);
-//     } else if (isGroup(expr)) {
-//         return evalExpr(expr.ge, env);
 //     }
-//     throw new Error(`Unhandled expression: ${JSON.stringify(expr)}`);
+//     // Add more expression types as needed
+//     throw new Error(`Unsupported expression type: ${expr.$type}`);
 // }
 
+// function interpretModel(model: any) {
+//     const attributes = extractAttributes(model);
+//     const initialState = extractInitialState(model);
+//     const states = extractStatesAndTransitions(model);
 
-// // interface Statemachine {
-// //     name: string;
-// //     events: Event[];
-// //     attributes: Attribute[];
-// //     initialState: State;
-// //     states: State[];
-// // }
+//     return {
+//         attributes,
+//         initialState,
+//         states
+//     };
+// }
 
-// // interface Event {
-// //     name: string;
-// // }
+// function evaluateBoolExpr(expr: BoolExpr, context: ExecutionContext): boolean | number {
+//     // Implement boolean expression evaluation based on the structure of BoolExpr
+//     return evaluateExpression(expr);
+// }
 
-// // interface Attribute {
-// //     name: string;
-// //     type: 'int' | 'bool';
-// //     defaultValue?: Expr | BoolExpr;
-// // }
+// function executeAction(action: Action, context: ExecutionContext): void {
+//     if (action.assignment) {
+//         const variableName = action.assignment.variable.ref?.name;
+//         if (variableName) {
+//             const value = evaluateExpression(action.assignment.value as BoolExpr);
+//             context.env.set(variableName, value);
+//         }
+//     } else if (action.print) {
+//         const value = action.print.value;
+//         if (value) {
+//             console.log(evaluateExpression(value as BoolExpr));
+//         }
+//     } else if (action.command) {
+//         // Execute the command logic, assuming it is properly implemented elsewhere
+//         console.log(`Executing command: ${action.command.ref?.name}`);
+//     }
+// }
 
-// // interface State {
-// //     name: string;
-// //     transitions: Transition[];
-// // }
+// function executeTransition(transition: Transition, context: ExecutionContext): void {
+//     if (transition.guard && !evaluateBoolExpr(transition.guard, context)) {
+//         return;
+//     }
+//     transition.actions.forEach(action => executeAction(action, context));
+//     context.currentState = transition.state.ref;
+// }
 
-// // interface Transition {
-// //     event: Event;
-// //     guard?: BoolExpr;
-// //     targetState: State;
-// //     actions: Action[];
-// // }
+// function handleEvents(context: ExecutionContext): void {
+//     while (context.events.length > 0 && context.currentState) {
+//         const event = context.events.shift();
+//         if (event) {
+//             for (const transition of context.currentState.transitions) {
+//                 if (transition.event.ref?.name === event) {
+//                     executeTransition(transition, context);
+//                     break;
+//                 }
+//             }
+//         }
+//     }
+// }
 
-// // type Action = Assignment | PrintStatement;
+// export function interpretStatemachine(model: any): void {
+//     const interpretedModel = interpretModel(model);
 
-// // interface Assignment {
-// //     variable: Attribute;
-// //     value: Expr | BoolExpr;
-// // }
+//     const context: ExecutionContext = {
+//         currentState: interpretedModel.initialState,
+//         events: [], // Populate this as needed
+//         env: interpretedModel.attributes
+//     };
 
-// // interface PrintStatement {
-// //     value: Expr | BoolExpr;
-// // }
+//     if (!context.currentState) {
+//         throw new Error("Initial state is undefined.");
+//     }
 
-// // type Expr = AddExpr | MultExpr | LitExpr | RefExpr | GroupExpr | NegExpr;
+//     // Example of event injection
+//     context.events.push('switchCapacity');
 
-// // interface AddExpr {
-// //     type: 'add';
-// //     left: Expr;
-// //     right: Expr;
-// // }
+//     while (context.currentState) {
+//         handleEvents(context);
+//         // Additional logic to prevent infinite loops and manage state
+//     }
+// }
 
-// // interface MultExpr {
-// //     type: 'mult';
-// //     left: Expr;
-// //     right: Expr;
-// // }
+// export function evalExprWithEnv(e: BoolExpr | Expr | undefined, env: StatemachineEnv): number {//
+//     if (e === undefined) {
+//         throw new Error('Undefined expression');
+//     }
+//     if (isLit(e)) {
+//         return e.val;
 
-// // interface LitExpr {
-// //     type: 'lit';
-// //     value: number;
-// // }
+//     } else if (isRef(e)) {
+//         const v = env.get(e.val.ref?.name ?? '');
+//         if (typeof v === 'boolean') {
+//             throw new Error(e.val.error?.message ?? `Boolean attribute being accessed in a non boolean expression.`);
+//         } else if (v != undefined) {
+//             return v;
+//         }
+//         throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
 
-// // interface RefExpr {
-// //     type: 'ref';
-// //     attribute: Attribute;
-// // }
+//     } else if (isBinExpr(e)) {
+//         let opval = e.op;
+//         let v1 = evalExprWithEnv(e.e1, env);
+//         let v2 = evalExprWithEnv(e.e2, env);
 
-// // interface GroupExpr {
-// //     type: 'group';
-// //     expr: Expr;
-// // }
+//         switch (opval) {
+//             case '+': return v1 + v2;
+//             case '-': return v1 - v2;
+//             case '*': return v1 * v2;
+//             case '/': return v1 / v2;
+//             default: throw new Error(`Unrecognized bin op passed: ${opval}`);
+//         }
 
-// // interface NegExpr {
-// //     type: 'neg';
-// //     expr: Expr;
-// // }
+//     } else if (isNegExpr(e)) {
+//         return -1 * evalExprWithEnv(e.ne, env);
 
-// // type BoolExpr = BoolLitExpr | BoolGroupExpr | BoolComparisonExpr | BoolBinExpr | ExprAsBoolExpr;
+//     } else if (isGroup(e)) {
+//         return evalExprWithEnv(e.ge, env);
 
-// // interface BoolLitExpr {
-// //     type: 'boolLit';
-// //     value: boolean;
-// // }
+//     } else if (isBoolExpr(e)) {
+//         if (isBoolLit(e) || isBoolRef(e)) {
+//             throw new Error('Unhandled Expression: ' + e);
+//         } else if (isBoolGroup(e)) {
+//             return evalExprWithEnv(e.gbe, env);
+//         }
+//     }
+//     throw new Error('Unhandled Expression: ' + e);
 
-// // interface BoolGroupExpr {
-// //     type: 'group';
-// //     expr: BoolExpr;
-// // }
+// }
 
-// // interface BoolComparisonExpr {
-// //     type: 'comparison';
-// //     left: Expr;
-// //     operator: '<=' | '<' | '>=' | '>' | '==' | '!=';
-// //     right: Expr;
-// // }
+// export function evalBoolExprWithEnv(e: BoolExpr | Expr | undefined, env: StatemachineEnv): boolean | number {
+//     if (isBoolLit(e)) {
+//         return e.val ?? false;
+//     } else if (isBoolRef(e)) {
+//         const v = env.get(e.val.ref?.name ?? '');
+//         if (v != undefined) {
+//             return v;
+//         }
+//         throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
+//     } else if (isBoolGroup(e)) {
+//         return evalBoolExprWithEnv(e.gbe, env);
+//     } else if (isBinExpr(e)) {
+//         let opval = e.op;
+//         let v1 = evalBoolExprWithEnv(e.e1, env);
+//         let v2 = evalBoolExprWithEnv(e.e2, env);
+//         if ((typeof v1 === 'number' && typeof v2 === 'number' && (opval === '/' || opval === '*' || opval === '+' || opval === '-' || opval === '==' || opval === '!=' || opval === '<' || opval === '>' || opval === '<=' || opval === '>='))) {
+//             switch (opval) {
+//                 case '<': return v1 < v2;
+//                 case '>': return v1 > v2;
+//                 case '<=': return v1 <= v2;
+//                 case '>=': return v1 >= v2;
+//                 case '==': return v1 === v2;
+//                 case '!=': return v1 !== v2;
+//                 case '/': return v1 / v2;
+//                 case '*': return v1 * v2;
+//                 case '+': return v1 + v2;
+//                 case '-': return v1 - v2;
+//                 default: throw new Error(`Unrecognized bin op passed: ${opval}`);
+//             }
 
-// // interface BoolBinExpr {
-// //     type: 'bin';
-// //     left: BoolExpr;
-// //     operator: '||' | '&&';
-// //     right: BoolExpr;
-// // }
-
-// // interface ExprAsBoolExpr {
-// //     type: 'exprAsBool';
-// //     expr: Expr;
-// // }
-
-
-// // class Environment {
-// //     private values: Map<string, number | boolean> = new Map();
-
-// //     set(name: string, value: number | boolean): void {
-// //         this.values.set(name, value);
-// //     }
-
-// //     get(name: string): number | boolean {
-// //         if (!this.values.has(name)) {
-// //             throw new Error(`Undefined attribute: ${name}`);
-// //         }
-// //         return this.values.get(name)!;
-// //     }
-// // }
-
-// // function evalExpr(expr: Expr, env: Environment): number {
-// //     switch (expr.type) {
-// //         case 'lit':
-// //             return expr.value;
-// //         case 'ref':
-// //             return env.get(expr.attribute.name) as number;
-// //         case 'add':
-// //             return evalExpr(expr.left, env) + evalExpr(expr.right, env);
-// //         case 'mult':
-// //             return evalExpr(expr.left, env) * evalExpr(expr.right, env);
-// //         case 'neg':
-// //             return -evalExpr(expr.expr, env);
-// //         case 'group':
-// //             return evalExpr(expr.expr, env);
-// //     }
-// // }
-
-// // function evalBoolExpr(expr: BoolExpr, env: Environment): boolean {
-// //     switch (expr.type) {
-// //         case 'boolLit':
-// //             return expr.value;
-// //         case 'group':
-// //             return evalBoolExpr(expr.expr, env);
-// //         case 'comparison':
-// //             const left = evalExpr(expr.left, env);
-// //             const right = evalExpr(expr.right, env);
-// //             switch (expr.operator) {
-// //                 case '<=': return left <= right;
-// //                 case '<': return left < right;
-// //                 case '>=': return left >= right;
-// //                 case '>': return left > right;
-// //                 case '==': return left === right;
-// //                 case '!=': return left !== right;
-// //             }
-// //         case 'bin':
-// //             const leftBool = evalBoolExpr(expr.left, env);
-// //             const rightBool = evalBoolExpr(expr.right, env);
-// //             switch (expr.operator) {
-// //                 case '||': return leftBool || rightBool;
-// //                 case '&&': return leftBool && rightBool;
-// //             }
-// //         case 'exprAsBool':
-// //             return evalExpr(expr.expr, env) !== 0;
-// //     }
-// // }
-
-// // function initializeAttributes(attributes: Attribute[], env: Environment): void {
-// //     for (const attribute of attributes) {
-// //         if (attribute.defaultValue) {
-// //             if (attribute.type === 'int') {
-// //                 env.set(attribute.name, evalExpr(attribute.defaultValue as Expr, env));
-// //             } else {
-// //                 env.set(attribute.name, evalBoolExpr(attribute.defaultValue as BoolExpr, env));
-// //             }
-// //         } else {
-// //             env.set(attribute.name, attribute.type === 'int' ? 0 : false);
-// //         }
-// //     }
-// // }
-
-// // function executeAction(action: Action, env: Environment): void {
-// //     if ('variable' in action) {
-// //         const value = 'value' in action && action.value ?
-// //             (action.value as BoolExpr).type ? evalBoolExpr(action.value as BoolExpr, env) : evalExpr(action.value as Expr, env) :
-// //             0;
-// //         env.set(action.variable.name, value);
-// //     } else if ('print' in action) {
-// //         const value = 'value' in action && action.value ?
-// //             (action.value as BoolExpr).type ? evalBoolExpr(action.value as BoolExpr, env) : evalExpr(action.value as Expr, env) :
-// //             '';
-// //         console.log(value);
-// //     }
-// // }
-
-// // function handleTransition(state: State, event: Event, env: Environment): State | null {
-// //     for (const transition of state.transitions) {
-// //         if (transition.event.name === event.name) {
-// //             if (!transition.guard || evalBoolExpr(transition.guard, env)) {
-// //                 for (const action of transition.actions) {
-// //                     executeAction(action, env);
-// //                 }
-// //                 return transition.targetState;
-// //             }
-// //         }
-// //     }
-// //     return null;
-// // }
-
-// // function runStatemachine(statemachine: Statemachine, events: Event[]): void {
-// //     const env = new Environment();
-// //     initializeAttributes(statemachine.attributes, env);
-
-// //     let currentState = statemachine.initialState;
-
-// //     for (const event of events) {
-// //         const nextState = handleTransition(currentState, event, env);
-// //         if (nextState) {
-// //             currentState = nextState;
-// //         }
-// //     }
-// // }
-
-
+//         } else if (typeof v1 === 'boolean' && typeof v2 === 'boolean' && (opval === '||' || opval === '&&')) {
+//             switch (opval) {
+//                 case '||': return v1 || v2;
+//                 case '&&': return v1 && v2;
+//                 default: throw new Error(`Unrecognized bin op passed: ${opval}`);
+//             }
+//         } else {
+//             throw new Error(`Unrecognized bin op passed: ${opval}`);
+//         }
+//     } else if (isExpr(e)) {
+//         return evalExprWithEnv(e, env);
+//     } else if (e === undefined) {
+//         return false;
+//     } else if (isNegExpr(e) || isGroup(e) || isLit(e) || isRef(e)) {
+//         return evalExprWithEnv(e, env);
+//     }
+//     throw new Error('Unhandled Boolean Expression: ' + e);
+// }

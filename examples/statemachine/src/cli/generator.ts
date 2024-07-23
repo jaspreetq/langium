@@ -8,13 +8,13 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { type Generated, expandToNode as toNode, joinToNode as join, toString } from 'langium/generate';
-import { Action, Attribute, BoolExpr, Expr, isBinExpr, isBoolExpr, isBoolGroup, isBoolLit, isBoolRef, isExpr, isGroup, isLit, isNegExpr, isRef, type State, type Statemachine } from '../language-server/generated/ast.js';
+import { Action, Attribute, BoolExpr, Expr, isBinExpr, isBoolExpr, isBoolGroup, isBoolLit, isBoolRef, isExpr, isGroup, isLit, isNegExpr, isRef, Transition, type State, type Statemachine } from '../language-server/generated/ast.js';
 import { extractDestinationAndName } from './cli-util.js';
+import { env, evalBoolExprWithEnv, evalExprWithEnv, StatemachineEnv } from './interpreter.js';
 // isExpr
 // For precise white space handling in generation template
 // we suggest you to enable the display of white space characters in your editor.
 // In VS Code execute the 'Toggle Render Whitespace' command, for example.
-type StatemachineEnv = Map<string, number | boolean | undefined>;
 // set map type to <string, E> where E is number or boolean
 
 export function generateCpp(statemachine: Statemachine, filePath: string, destination: string | undefined): string {
@@ -51,7 +51,6 @@ function joinWithExtraNL<T>(content: T[], toString: (e: T) => Generated): Genera
 }
 
 export function generateCppContent(ctx: GeneratorContext): Generated {
-    const env: StatemachineEnv = new Map();
     return toNode`
         #include <iostream>
         #include <map>
@@ -128,12 +127,11 @@ function generateStatemachineClass(ctx: GeneratorContext, env: StatemachineEnv):
                 new_state->set_context(this);
                 state = new_state;
             }
-        ${joinWithExtraNL(ctx.statemachine.events, event => toNode`
-                void ${event.name}() {
-                    state->${event.name}();
-                }
-        `)}
-
+            ${joinWithExtraNL(ctx.statemachine.events, event => toNode`
+                    void ${event.name}() {
+                        state->${event.name}();
+                    }
+            `)}
         };
     `;
 }
@@ -146,98 +144,6 @@ function generateStateDeclaration(ctx: GeneratorContext, state: State): Generate
             ${joinWithExtraNL(state.transitions, transition => `void ${transition.event.$refText}() override;`)}
         };
     `;
-}
-
-function evalExprWithEnv(e: BoolExpr | Expr | undefined, env: StatemachineEnv): number {//
-    if (e === undefined) {
-        throw new Error('Undefined expression');
-    }
-    if (isLit(e)) {
-        return e.val;
-
-    } else if (isRef(e)) {
-        const v = env.get(e.val.ref?.name ?? '');
-        if (typeof v === 'boolean') {
-            throw new Error(e.val.error?.message ?? `Boolean attribute being accessed in a non boolean expression.`);
-        } else if (v != undefined) {
-            return v;
-        }
-        throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
-
-    } else if (isBinExpr(e)) {
-        let opval = e.op;
-        let v1 = evalExprWithEnv(e.e1, env);
-        let v2 = evalExprWithEnv(e.e2, env);
-
-        switch (opval) {
-            case '+': return v1 + v2;
-            case '-': return v1 - v2;
-            case '*': return v1 * v2;
-            case '/': return v1 / v2;
-            default: throw new Error(`Unrecognized bin op passed: ${opval}`);
-        }
-
-    } else if (isNegExpr(e)) {
-        return -1 * evalExprWithEnv(e.ne, env);
-
-    } else if (isGroup(e)) {
-        return evalExprWithEnv(e.ge, env);
-
-    } else if (isBoolExpr(e)) {
-        if (isBoolLit(e) || isBoolRef(e)) {
-            throw new Error('Unhandled Expression: ' + e);
-        } else if (isBoolGroup(e)) {
-            return evalExprWithEnv(e.gbe, env);
-        }
-    }
-    throw new Error('Unhandled Expression: ' + e);
-
-}
-
-function evalBoolExprWithEnv(e: BoolExpr | Expr | undefined, env: StatemachineEnv): boolean | number {
-    if (isBoolLit(e)) {
-        return e.val ?? false;
-    } else if (isBoolRef(e)) {
-        const v = env.get(e.val.ref?.name ?? '');
-        if (v != undefined) {
-            return v;
-        }
-        throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
-    } else if (isBoolGroup(e)) {
-        return evalBoolExprWithEnv(e.gbe, env);
-    } else if (isBinExpr(e)) {
-        let opval = e.op;
-        let v1 = evalBoolExprWithEnv(e.e1, env);
-        let v2 = evalBoolExprWithEnv(e.e2, env);
-        if ((typeof v1 === 'number' && typeof v2 === 'number' && (opval === '/' || opval === '*' || opval === '+' || opval === '-' || opval === '==' || opval === '!=' || opval === '<' || opval === '>' || opval === '<=' || opval === '>='))) {
-            switch (opval) {
-                case '<': return v1 < v2;
-                case '>': return v1 > v2;
-                case '<=': return v1 <= v2;
-                case '>=': return v1 >= v2;
-                case '==': return v1 === v2;
-                case '!=': return v1 !== v2;
-                case '/': return v1 / v2;
-                case '*': return v1 * v2;
-                case '+': return v1 + v2;
-                case '-': return v1 - v2;
-                default: throw new Error(`Unrecognized bin op passed: ${opval}`);
-            }
-
-        } else if (typeof v1 === 'boolean' && typeof v2 === 'boolean' && (opval === '||' || opval === '&&')) {
-            switch (opval) {
-                case '||': return v1 || v2;
-                case '&&': return v1 && v2;
-                default: throw new Error(`Unrecognized bin op passed: ${opval}`);
-            }
-        } else {
-            throw new Error(`Unrecognized bin op passed: ${opval}`);
-        }
-    } else if (isExpr(e)) {
-        return evalExprWithEnv(e, env);
-    }
-
-    throw new Error('Unhandled Boolean Expression: ' + e);
 }
 
 function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv): Generated {
@@ -265,49 +171,46 @@ function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv
         `;
 }
 
-function generateStateDefinition(ctx: GeneratorContext, state: State, env: StatemachineEnv): Generated {
-    const transitionsCode = state.transitions.map(transition => {
-        const guardCondition = transition.guard != undefined ? convertBoolExprToString(transition.guard, env, 'statemachine->') : "true";
-        const actionsCode = transition.actions.map(action => generateAction(action, env)).join('\n');
-
-        return `
-        void ${state.name}::${transition.event.$refText}() {
-            if(${guardCondition}) {
-                ${actionsCode}
-                statemachine->transition_to(new ${transition.state.$refText});
-            } else {
-                std::cout << "Transition not allowed." << std::endl;
-            }
-        }
-        `;
-    }).join('\n');
-
-    return toNode`
-        // ${state.name}
-        ${transitionsCode}
-    `;
-}
 
 function generateAction(action: Action, env: StatemachineEnv): string {
     if (action.assignment) {
-        const varType = action.assignment.variable?.ref?.type;
-        if (varType !== 'bool' && varType !== 'int') {
-            throw new Error(`Unsupported type ${varType}`);
-        }
-        const valueString = convertBoolExprToString(action.assignment.value, env, 'statemachine->');
-        let value;
-        if (varType === 'int') {
-            value = evalExprWithEnv(action.assignment.value, env);
-        } else {
-            value = evalBoolExprWithEnv(action.assignment.value, env);
-        }
-        env.set(action.assignment.variable.$refText, value);
-        return `statemachine->${action.assignment.variable.$refText} = ${valueString};`;
+        const variableName = action.assignment.variable.ref?.name;
+        const value = convertBoolExprToString(action.assignment.value, env, 'statemachine->');
+        return `            statemachine->${variableName} = ${value};`;
     } else if (action.print) {
         const value = convertBoolExprToString(action.print.value, env, 'statemachine->');
-        return `std::cout << ${value} << std::endl;`;
+        return `            std::cout << ${value} << std::endl;`;
     }
     return '';
+}
+
+function generateTransition(transition: Transition, stateName: string, env: StatemachineEnv): string {
+    if (transition.guard !== undefined && typeof evalBoolExprWithEnv(transition.guard, env) !== 'boolean') {
+        throw new Error('Guard condition must be a boolean expression');
+    }
+
+    const guardCondition = transition.guard != undefined ? convertBoolExprToString(transition.guard, env, 'statemachine->') : "true";
+    const actionsCode = transition.actions.map(action => `${generateAction(action, env)}`).join('\n');
+
+    return `
+    void ${stateName}::${transition.event.$refText}() {
+        if (${guardCondition}) {
+${transition.actions?.length > 0 ? actionsCode : ''}
+            statemachine->transition_to(new ${transition.state.$refText});
+        } else {
+            std::cout << "Transition not allowed." << std::endl;
+        }
+    }
+    `;
+}
+
+function generateStateDefinition(ctx: GeneratorContext, state: State, env: StatemachineEnv): Generated {
+    const transitionsCode = state.transitions.map(transition => generateTransition(transition, state.name, env)).join('\n');
+
+    return toNode`
+        // ${state.name}
+    ${transitionsCode}
+    `;
 }
 
 function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv, refString: string): string {
@@ -343,183 +246,6 @@ function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv, refSt
     throw new Error('Unhandled Expression: ' + e);
 }
 
-
-// function generateStateDefinition(ctx: GeneratorContext, state: State, env: StatemachineEnv): Generated {
-//     return toNode`
-//         // ${state.name}
-//         ${join(state.transitions, transition => toNode`
-//             void ${state.name}::${transition.event.$refText}() {
-//                 std::cout << "Transitioning from container: ${transition.guard?.$container} idx: ${transition.guard?.$containerIndex} ${transition.guard?.$containerProperty} ${transition.guard?.$cstNode} ${transition.guard?.$document}to ${transition.$cstNode}" << std::endl;
-//                 if (true) {
-//                     ${transition.guard}
-//                     statemachine->transition_to(new ${transition.state.$refText});
-//                 } else {
-//                     std::cout << "Transition not allowed." << std::endl;
-//                 }
-//             }
-//         `)}
-//     `;
-// }
-
-// INT Case //////////////////////////////////////////////////////
-// else if (attribute.defaultValue && attribute.type === 'int') {
-//     const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
-//     // const defaultInitValue = attribute.type === 'int' ? 0 : attribute.type === 'bool' ? 'false' : 'undefined';
-//     // throw new Error(`Unrecognized bin op passed: ${opval}`);
-//     env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
-
-//     // const defaultValueString = (attribute.type === 'bool') ? defaultValue.toString() : defaultValue;
-
-//     // Determine the type of the attribute based on the default value type
-//     // const attributeType = (attribute.type === 'number') ? 'int' : 'bool';
-
-//     return toNode`
-//         ${attribute.type} ${attribute.name} = ${defaultValue};
-//         std::cout << "${attribute.name}: " << ${env.get(attribute.name) ?? "undefined"}<< std::endl;
-//     `;
-// } 
-// function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv): Generated {
-//     // attribute.defaultValue =
-//     return toNode`
-//         ${attribute.type} ${attribute.name};
-//     `;
-// }
-// function generateAttributeInitialization(attribute: Attribute, env: StatemachineEnv): Generated {
-//     if (attribute.type !== 'bool' && attribute.type !== 'int') {
-//         throw new Error(`Unsupported type ${attribute.type}`);
-//     } else if (attribute.defaultValue && attribute.type === 'bool') {
-//         const defaultValue = evalBoolExprWithEnv(attribute.defaultValue, env);
-//         if (typeof defaultValue !== 'boolean') {
-//             throw new Error(`value for attribute '${attribute.name}' is not a boolean.`);
-//         }
-//         env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
-
-//     } else if (attribute.defaultValue && attribute.type === 'int') {
-//         const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
-//         if (typeof defaultValue !== 'number') {
-//             throw new Error(`value for attribute '${attribute.name}' is not a boolean.`);
-//         }
-//         env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
-//     }
-//     // Default initialization based on attribute type
-//     const defaultInitValue = attribute.type === 'int' ? 0 : false;
-//     env.set(attribute.name, defaultInitValue);  // Store the default value in the environment
-//     return toNode`
-//         ${attribute.type} ${attribute.name} = ${defaultInitValue};
-//         std::cout << "${attribute.name}: " << "${env.get(attribute.name)}" << std::endl;
-//     `;
-// }
-
-
-// if (attribute.defaultValue) {
-//     if (attribute.defaultValue) {
-//     const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
-//     env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
-//     return toNode`this->${attribute.name} = ${defaultValue};`;
-// }
-// return toNode`this->${attribute.name} = 0;`; // Set default value to 0
-//     const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
-//     env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
-//     return toNode`this->${attribute.name} = ${defaultValue};`;
-// }
-// return toNode``;
-// function generateAttributeDeclaration(attribute: Attribute): Generated {
-
-//     return toNode`
-//         int ${attribute.name}${generateAttributeDefaultValue(attribute)};
-//     `;
-// }
-
-// function generateAttributeDefaultValue(attribute: Attribute): string {
-//     if (typeof attribute.defaultValue != 'number') { // Check if it's a number
-//         attribute.defaultValue = undefined;
-//     } else
-//     const defaultValue = attribute.defaultValue ? evalExprWithEnv(attribute.defaultValue, new Map()) : 0;
-//     return ` = ${defaultValue}`;
-// }
-
-// function generateAttributeInitialization(attribute: Attribute, env: StatemachineEnv): Generated {
-//     let defaultValue = 0; // Default value for integers
-
-//     if (attribute.defaultValue) {
-//         const evaluatedValue = evalExprWithEnv(attribute.defaultValue, env); // Evaluate the expression
-//         if (typeof evaluatedValue === 'number') { // Check if it's a number
-//             defaultValue = evaluatedValue;
-//         } else {
-//             console.warn(`Warning: Default value for attribute '${attribute.name}' is not an integer. Using default value of 0.`);
-//         }
-
-//         env.set(attribute.name, defaultValue);
-
-//         return toNode`
-//                 this->${attribute.name} = ${defaultValue};
-//                 std::cout << "${attribute.name}: " << this->${attribute.name} << std::endl;
-//             `;
-//     }
-
-//     // Store the default value in the environment if no default is provided
-//     env.set(attribute.name, defaultValue);
-//     return toNode``; // No initialization code needed if no default is provided
-// }
-//////////////////
-//         // Check if the evaluated value is a literal number
-//         if (isLit(attribute.defaultValue) && typeof evaluatedValue === 'number') {
-//             defaultValue = evaluatedValue;
-//         } else {
-//             console.warn(`Warning: Default value for attribute '${attribute.name}' is not a simple integer literal. Using default value of 0.`);
-//         }
-
-//         env.set(attribute.name, defaultValue);  // Update the environment
-
-//         return toNode`
-//             this->${attribute.name} = ${defaultValue};
-//             std::cout << "${attribute.name}: " << this->${attribute.name} << std::endl;
-//         `;
-//     }
-
-//     // Store the default value in the environment if no default is provided
-//     env.set(attribute.name, defaultValue);
-//     return toNode``; // No initialization code needed if no default is provided
-// }
-//     let defaultValue = 0;
-
-//     if (attribute.defaultValue) {
-//         const evaluatedValue = evalExprWithEnv(attribute.defaultValue, env);
-
-//         if (typeof evaluatedValue === 'number') { // Check if it's a number
-//             defaultValue = evaluatedValue;
-//         } else {
-//             console.warn(`Warning: Default value for attribute '${attribute.name}' is not an integer. Using default value of 0.`);
-//         }
-
-//         env.set(attribute.name, defaultValue);
-
-//         return toNode`
-//                 this->${attribute.name} = ${defaultValue};
-//                 std::cout << "${attribute.name}: " << this->${attribute.name} << std::endl;
-//             `;
-//     }
-
-//     // Store the default value in the environment if no default is provided
-//     env.set(attribute.name, defaultValue);
-//     return toNode``; // No initialization code needed if no default is provided
-// }
-
-
-//     if (typeof attribute.defaultValue == "number") {
-//         const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
-//         env.set(attribute.name, defaultValue);  // Store the evaluated value in the environment
-//         return toNode`
-//             this->${attribute.name} = ${defaultValue};
-//             std::cout << "${attribute.name}: " << this->${attribute.defaultValue} << std::endl;
-//         `;
-//     }
-//     else {
-//         env.set(attribute.name, zeroDefaultValue);  // Store the evaluated value in the environment
-//     }
-//     return toNode``;
-// }
-
 function generateMain(ctx: GeneratorContext, env: StatemachineEnv): Generated {
     return toNode`
         int main() {
@@ -542,108 +268,3 @@ function generateMain(ctx: GeneratorContext, env: StatemachineEnv): Generated {
         }
     `;
 }
-
-
-
-// function evalExprWithEnv(e: Expr, env: StatemachineEnv): number {
-//     if (isLit(e)) {
-//         return e.val;
-
-//     } else if (isRef(e)) {
-//         const v = env.get(e.val.ref?.name ?? '');
-//         if (v != undefined) {
-//             return v;
-//         }
-//         throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
-
-//     } else if (isBinExpr(e)) {
-//         let opval = e.op;
-//         let v1 = evalExprWithEnv(e.e1, env);
-//         let v2 = evalExprWithEnv(e.e2, env);
-
-//         switch (opval) {
-//             case '+': return v1 + v2;
-//             case '-': return v1 - v2;
-//             case '*': return v1 * v2;
-//             case '/': return v1 / v2;
-//             default: throw new Error(`Unrecognized bin op passed: ${opval}`);
-//         }
-
-//     } else if (isNegExpr(e)) {
-//         return -1 * evalExprWithEnv(e.ne, env);
-
-//     } else if (isGroup(e)) {
-//         return evalExprWithEnv(e.ge, env);
-
-//     }
-
-//     throw new Error('Unhandled Expression: ' + e);
-// }
-
-// function evalBoolExprWithEnv(e: BoolExpr, env: StatemachineEnv): boolean {
-//     if (isLit(e)) {
-//         return !!e.val;
-
-//     } else if (isRef(e)) {
-//         const v = env.get(e.val.ref?.name ?? '');
-//         if (v != undefined) {
-//             return !!v;
-//         }
-//         throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
-
-//     } else if (isBinExpr(e)) {
-//         let opval = e.op;
-//         switch (opval) {
-//             case '||': return evalBoolExprWithEnv(e.e1, env) || evalBoolExprWithEnv(e.e2, env);;
-//             case '&&': return evalBoolExprWithEnv(e.e1, env) && evalBoolExprWithEnv(e.e2, env);;
-//             case '==': return evalBoolExprWithEnv(e.e1, env) === evalBoolExprWithEnv(e.e2, env);;
-//             case '!=': return evalBoolExprWithEnv(e.e1, env) !== evalBoolExprWithEnv(e.e2, env);;
-//             case '<': return evalExprWithEnv(e.e1, env) < evalExprWithEnv(e.e2, env);
-//             case '>': return evalExprWithEnv(e.e1, env) > evalExprWithEnv(e.e2, env);
-//             case '<=': return evalExprWithEnv(e.e1, env) <= evalExprWithEnv(e.e2, env);
-//             case '>=': return evalExprWithEnv(e.e1, env) >= evalExprWithEnv(e.e2, env);
-//             default: throw new Error(`Unrecognized bin op passed: ${opval}`);
-//         }
-
-//     } else if (isNegExpr(e)) {
-//         return !evalBoolExprWithEnv(e.ne, env);
-
-//     } else if (isGroup(e)) {
-//         return evalBoolExprWithEnv(e.ge, env);
-
-//     }
-
-//     throw new Error('Unhandled Expression: ' + e);
-// }
-
-// function generateStateDefinition(ctx: GeneratorContext, state: State, env: StatemachineEnv): Generated {
-//     return toNode`
-//         // ${state.name}
-//         ${join(state.transitions, transition => toNode`
-//             void ${state.name}::${transition.event.$refText}() {
-//                 if (${transition.guard ? evalBoolExprWithEnv(transition.guard, env) : true}) {
-//                     statemachine->transition_to(new ${transition.state.$refText});
-//                 } else {
-//                     std::cout << "Transition not allowed." << std::endl;
-//                 }
-//             }
-//         `)}
-//     `;
-// }
-
-
-// function generateAttributeDeclaration(attribute: Attribute): Generated {
-//     // attribute.defaultValue =
-//     return toNode`
-//         int ${attribute.name} = 0;
-//     `;
-// }
-
-// function generateAttributeDefaultValue(attribute: Attribute): string {
-//     if (attribute.defaultValue) {
-//         const env: StatemachineEnv = new Map();
-//         const defaultValue = evalExprWithEnv(attribute.defaultValue, env);
-//         return ` = ${defaultValue}`;
-//     }
-//     return '= 0';
-// }

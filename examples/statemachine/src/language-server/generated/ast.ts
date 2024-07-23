@@ -53,6 +53,7 @@ export interface Action extends AstNode {
     readonly $container: State | Transition;
     readonly $type: 'Action';
     assignment?: Assignment;
+    command?: Reference<Command>;
     print?: PrintStatement;
 }
 
@@ -63,7 +64,7 @@ export function isAction(item: unknown): item is Action {
 }
 
 export interface Assignment extends AstNode {
-    readonly $container: Action | Statemachine;
+    readonly $container: Action;
     readonly $type: 'Assignment' | 'BinExpr' | 'Expr' | 'Group' | 'Lit' | 'NegExpr' | 'PrimExpr' | 'Ref';
     value: BoolExpr;
     variable: Reference<Attribute>;
@@ -239,7 +240,6 @@ export function isState(item: unknown): item is State {
 
 export interface Statemachine extends AstNode {
     readonly $type: 'Statemachine';
-    Assignments: Array<Assignment>;
     attributes: Array<Attribute>;
     commands: Array<Command>;
     events: Array<Event>;
@@ -333,6 +333,9 @@ export class StatemachineAstReflection extends AbstractAstReflection {
     getReferenceType(refInfo: ReferenceInfo): string {
         const referenceId = `${refInfo.container.$type}:${refInfo.property}`;
         switch (referenceId) {
+            case 'Action:command': {
+                return Command;
+            }
             case 'Assignment:variable':
             case 'BoolRef:val':
             case 'Ref:val': {
@@ -358,6 +361,7 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                     name: Action,
                     properties: [
                         { name: 'assignment' },
+                        { name: 'command' },
                         { name: 'print' }
                     ]
                 };
@@ -485,7 +489,6 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                 return {
                     name: Statemachine,
                     properties: [
-                        { name: 'Assignments', defaultValue: [] },
                         { name: 'attributes', defaultValue: [] },
                         { name: 'commands', defaultValue: [] },
                         { name: 'events', defaultValue: [] },

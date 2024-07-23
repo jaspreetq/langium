@@ -122,19 +122,6 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
           },
           {
             "$type": "Assignment",
-            "feature": "Assignments",
-            "operator": "+=",
-            "terminal": {
-              "$type": "RuleCall",
-              "rule": {
-                "$ref": "#/rules@7"
-              },
-              "arguments": []
-            },
-            "cardinality": "*"
-          },
-          {
-            "$type": "Assignment",
             "feature": "states",
             "operator": "+=",
             "terminal": {
@@ -362,6 +349,10 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
               }
             ],
             "cardinality": "?"
+          },
+          {
+            "$type": "Keyword",
+            "value": "end"
           }
         ]
       },
@@ -400,6 +391,18 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 "$ref": "#/rules@6"
               },
               "arguments": []
+            }
+          },
+          {
+            "$type": "Assignment",
+            "feature": "command",
+            "operator": "=",
+            "terminal": {
+              "$type": "CrossReference",
+              "type": {
+                "$ref": "#/rules@2"
+              },
+              "deprecatedSyntax": false
             }
           }
         ]

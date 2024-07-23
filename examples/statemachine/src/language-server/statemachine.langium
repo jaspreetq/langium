@@ -6,7 +6,6 @@ entry Statemachine:
     ('commands'    commands+=Command+)?
     ('attributes' attributes+=Attribute+)?
     'initialState' init=[State]
-    Assignments+=Assignment*
     states+=State*;
 
 Event:
@@ -22,14 +21,10 @@ State:
     'end';
 
 Transition:
-    event=[Event:ID] ('when' guard=BoolExpr)? '=>' state=[State] ('with' actions+=Action+)?;
-
-// yet to include LessThan | GreaterThan | Equal | NotEqual | And | Or | Not | 
-// GuardCondition: 
-//     expression= '(' GuardCondition ')';
+    event=[Event:ID] ('when' guard=BoolExpr)? '=>' state=[State] ('with' actions+=Action+)? 'end';
 
 Action:
-    assignment=Assignment | print=PrintStatement;
+    assignment=Assignment | print=PrintStatement | command=[Command];
 
 PrintStatement:     
     'print' '(' value=(BoolExpr|Expr) ')';
@@ -53,7 +48,6 @@ BooleanPrimExpr: BoolLit | BoolRef | BoolGroup |Expr;
 BoolLit: val=BOOL_VALUE;
 BoolRef: val=[Attribute:ID];
 BoolGroup: '(' gbe=BoolExpr ')';
-// BoolExpComp: leftExpression= Expr op=('==' | '!=' | '<' | '>' | '<=' | '>=' ) rightExpression=Expr;
 
 // Expressions
 Expr: Add; 
@@ -77,16 +71,3 @@ terminal NUMBER returns number: /[0-9]+(\.[0-9]*)?/;
 // terminal STRING returns string: /"([^"\\]|\\.)*"/;
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;
-
-// NonBoolExpr: AddBool; 
-// AddBool infers BoolExpr: 
-//     MultBool ({infer BinExpr.e1=current} op=('+'|'-') e2=MultBool)*;
-// MultBool infers BoolExpr: 
-//     PrimBoolExpr ({infer BinExpr.e1=current} op=('*'|'/') e2=PrimBoolExpr)*;
-
-// PrimBoolExpr: Lit | Ref | Group | NegExpr;
-
-// Lit:        val=NUMBER | BOOL_VALUE;
-// Ref:        val=[Attribute:ID];
-// Group:      '(' ge=Expr ')';    
-// NegExpr:    '-' ne=Expr;
