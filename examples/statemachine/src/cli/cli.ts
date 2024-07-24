@@ -16,6 +16,20 @@ import * as url from 'node:url';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { interpretStatemachine } from './interpreter.js';
+import { eventsAreValid } from './interpret-util.js';
+
+export const interpret = async (fileName: string, eventNames: string[]): Promise<void> => {
+    const services = createStatemachineServices(NodeFileSystem).statemachine;
+    const model = await extractAstNode<Statemachine>(fileName, StatemachineLanguageMetaData.fileExtensions, services);
+    console.log('Interpreting model...', model.$type, typeof model);
+    if (!eventsAreValid(model, eventNames)) {
+        console.error('Invalid events provided. Interpretation aborted.');
+        return;
+    }
+    console.log('Interpreting model...', model.$type, typeof model);
+    interpretStatemachine(model, eventNames);
+};
+
 
 export const generateAction = async (fileName: string, opts: GenerateOptions): Promise<void> => {
     const services = createStatemachineServices(NodeFileSystem).statemachine;
@@ -24,12 +38,6 @@ export const generateAction = async (fileName: string, opts: GenerateOptions): P
     console.log(chalk.green(`C++ code generated successfully: ${generatedFilePath}`));
 };
 
-export const interpret = async (fileName: string): Promise<void> => {
-    const services = createStatemachineServices(NodeFileSystem).statemachine;
-    const model = await extractAstNode<Statemachine>(fileName, StatemachineLanguageMetaData.fileExtensions, services);
-    // const serializedAst = services.serializer.JsonSerializer.serialize(model, { sourceText: true, textRegions: true });
-    interpretStatemachine(model);
-};
 
 export const generateAst = async (fileName: string, opts: GenerateOptions): Promise<void> => {
     const services = createStatemachineServices(NodeFileSystem).statemachine;
@@ -67,8 +75,9 @@ program
 program
     .command('interpret')
     .argument('<file>', `possible file extensions: ${StatemachineLanguageMetaData.fileExtensions.join(', ')}`)
-    .description('Generates a Statemachine AST in JSON format')
-    .action(interpret);
+    .argument('<events...>', 'list of events to trigger the statemachine')
+    .description('Interpret a statemachine model with a sequence of events')
+    .action((file, events) => interpret(file, events));
 
 program.parse(process.argv);
 

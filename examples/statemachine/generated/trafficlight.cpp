@@ -93,6 +93,7 @@ public:
             std::cout << (statemachine->cnt > 10) << std::endl;
             statemachine->cnt = ((statemachine->cnt + 1) + (20 * ((statemachine->cnt + 1))));
             std::cout << statemachine->cnt << std::endl;
+
             std::cout << (statemachine->isEmpty && statemachine->checkDefault) << std::endl;
             statemachine->transition_to(new RedLight);
         } else {
@@ -103,7 +104,7 @@ public:
     // RedLight
 
     void RedLight::switchCapacity() {
-        if (((12 - (32 * 30)) > statemachine->cnt)) {
+        if (((12 + (32 * 30)) > statemachine->cnt)) {
             std::cout << (statemachine->cnt > 10) << std::endl;
             statemachine->cnt = ((statemachine->cnt + 1) + (20 * ((statemachine->cnt + 1))));
             std::cout << statemachine->cnt << std::endl;

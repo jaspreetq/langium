@@ -180,6 +180,8 @@ function generateAction(action: Action, env: StatemachineEnv): string {
     } else if (action.print) {
         const value = convertBoolExprToString(action.print.value, env, 'statemachine->');
         return `            std::cout << ${value} << std::endl;`;
+    } else if (action.command) {
+        return `            Run Command: ${action.command.$refText}();`;
     }
     return '';
 }

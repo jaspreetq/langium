@@ -10,7 +10,7 @@
     },
     {
       "name": "keyword.control.statemachine",
-      "match": "\\b(actions|attributes|commands|end|events|initialState|print|state|statemachine|when|with)\\b"
+      "match": "\\b(actions|attributes|commands|end|events|initialState|print|run|state|statemachine|when|with)\\b"
     }
   ],
   "repository": {

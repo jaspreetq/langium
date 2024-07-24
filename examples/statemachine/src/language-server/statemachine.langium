@@ -24,7 +24,7 @@ Transition:
     event=[Event:ID] ('when' guard=BoolExpr)? '=>' state=[State] ('with' actions+=Action+)? 'end';
 
 Action:
-    assignment=Assignment | print=PrintStatement | command=[Command];
+    assignment=Assignment | print=PrintStatement | ('run' command=[Command]);
 
 PrintStatement:     
     'print' '(' value=(BoolExpr|Expr) ')';

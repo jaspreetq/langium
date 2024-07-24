@@ -1,7 +1,7 @@
 // Monarch syntax highlighting for the statemachine language.
 export default {
     keywords: [
-        'actions','attributes','commands','end','events','initialState','print','state','statemachine','when','with'
+        'actions','attributes','commands','end','events','initialState','print','run','state','statemachine','when','with'
     ],
     operators: [
         '!=','&&','*','+','-','/',':','<','<=','=','==','=>','>','>=','||'

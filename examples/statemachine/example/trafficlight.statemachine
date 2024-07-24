@@ -9,7 +9,7 @@ commands
 
 attributes
     cnt : int = 89
-    isEmpty : bool = cnt > 10 || cnt < 20 -7
+    isEmpty : bool = cnt > 10 || cnt < 20-7
     checkDefault : bool
 
 initialState PowerOff
@@ -20,12 +20,13 @@ state PowerOff
         print(cnt > 10)
         cnt = cnt + 1 + 20*(cnt+1)
         print(cnt)
+        run testCommand
         print(isEmpty && checkDefault)
     end
 end
 
 state RedLight
-    switchCapacity when (12-32*30 > cnt) => PowerOff 
+    switchCapacity when (12+32*30 > cnt) => PowerOff 
     with 
         print(cnt > 10)
         cnt = cnt + 1 + 20*(cnt+1) 

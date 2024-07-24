@@ -394,16 +394,25 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             }
           },
           {
-            "$type": "Assignment",
-            "feature": "command",
-            "operator": "=",
-            "terminal": {
-              "$type": "CrossReference",
-              "type": {
-                "$ref": "#/rules@2"
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Keyword",
+                "value": "run"
               },
-              "deprecatedSyntax": false
-            }
+              {
+                "$type": "Assignment",
+                "feature": "command",
+                "operator": "=",
+                "terminal": {
+                  "$type": "CrossReference",
+                  "type": {
+                    "$ref": "#/rules@2"
+                  },
+                  "deprecatedSyntax": false
+                }
+              }
+            ]
           }
         ]
       },
