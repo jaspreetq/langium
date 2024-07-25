@@ -3,7 +3,11 @@
   "extends": "./tsconfig.src.json",
   "compilerOptions": {
     "noEmit": true,
-    "rootDir": "."
+    "rootDir": ".",
+    "lib": [
+      "DOM",
+      "ES2015"
+    ],
   },
   "include": [
     "src/**/*",

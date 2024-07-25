@@ -60,8 +60,13 @@
         "chalk": "~5.3.0",
         "commander": "~11.0.0",
         "langium": "~3.1.0",
+        "monaco-editor-workers": "^0.45.0",
+        "monaco-editor-wrapper": "~4.0.1",
         "vscode-languageclient": "~9.0.1",
-        "vscode-languageserver": "~9.0.1"
+        "vscode-languageserver": "~9.0.1",
+        "vscode-languageserver-protocol": "~3.17.5",
+        "vscode-languageserver-types": "~3.17.5",
+        "vscode-jsonrpc": "~8.2.0"
     },
     "devDependencies": {
         "@types/node": "^20.14.9",

@@ -53,7 +53,7 @@
   },
   "scripts": {
     "clean": "shx rm -rf lib coverage",
-    "build": "tsc",
+    "build": "tsc && npm run clean && npm run build:web && npm run build:extension",
     "watch": "tsc --watch",
     "lint": "eslint src test --ext .ts",
     "validate-exports": "tsc -p test/tsconfig.export-main.json",
@@ -67,10 +67,27 @@
     "chevrotain-allstar": "~0.3.0",
     "vscode-languageserver": "~9.0.1",
     "vscode-languageserver-textdocument": "~1.0.11",
-    "vscode-uri": "~3.0.8"
+    "monaco-editor-wrapper": "~4.0.1",
+    "vscode-uri": "~3.0.8",
+    "colors": "~1.4.0",
+    "commander": "~12.0.0",
+    "langium": "~3.0.0",
+    "vscode-languageclient": "~9.0.1",
+    "vscode-languageserver-protocol": "~3.17.5",
+    "vscode-languageserver-types": "~3.17.5",
+    "vscode-jsonrpc": "~8.2.0"
   },
   "devDependencies": {
-    "langium-cli": "~3.1.0"
+    "@types/node": "~18.19.25",
+    "@types/vscode": "~1.87.0",
+    "@typescript-eslint/eslint-plugin": "~7.3.1",
+    "@typescript-eslint/parser": "~7.3.1",
+    "@vscode/vsce": "~2.21.0",
+    "esbuild": "~0.20.2",
+    "eslint": "~8.57.0",
+    "langium-cli": "~3.0.1",
+    "shx": "~0.3.4",
+    "typescript": "~5.4.3"
   },
   "volta": {
     "node": "18.19.1",

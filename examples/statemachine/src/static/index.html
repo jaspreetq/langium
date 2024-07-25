@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>StateMachine Editor</title>
+    <style>
+        #monaco-editor-root {
+            width: 800px;
+            height: 600px;
+        }
+        #result-text-area {
+            width: 800px;
+            height: 200px;
+            background: #2e2e2e;
+            color: white;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="monaco-editor-root"></div>
+    <textarea id="result-text-area" readonly></textarea>
+    <p id="status-msg"></p>
+    <script type="module" src="./path-to-your-main-file.js"></script>
+</body>
+</html>
