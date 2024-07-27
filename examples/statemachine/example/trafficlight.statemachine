@@ -8,8 +8,8 @@ commands
     testCommand
 
 attributes
-    cnt : int = 89
-    isEmpty : bool = cnt > 10 || cnt < 20-7
+    cnt : int = -89
+    isEmpty : bool = 24 - 2 < checkDefault
     checkDefault : bool
 
 initialState PowerOff
@@ -17,9 +17,9 @@ initialState PowerOff
 state PowerOff
     switchCapacity when true => RedLight 
     with 
-        print(cnt > 10)
+        print(true > 10 - 100)
         cnt = cnt + 1 + 20*(cnt+1)
-        print(cnt)
+        print(cnt - 23)
         run testCommand
         print(isEmpty && checkDefault)
     end

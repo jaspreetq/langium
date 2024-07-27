@@ -5,8 +5,9 @@
     "noEmit": true,
     "rootDir": ".",
     "lib": [
-      "DOM",
-      "ES2015"
+      "dom",
+      "ES2015",
+      "WebWorker"
     ],
   },
   "include": [

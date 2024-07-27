@@ -12,5 +12,6 @@ await esbuild.build({
     minify: true,
     sourcemap: true,
     bundle: true,
-    outfile: './public/statemachine.js',
+    external: ['vscode'],
+    outfile: './public/statemachine.js'
 });

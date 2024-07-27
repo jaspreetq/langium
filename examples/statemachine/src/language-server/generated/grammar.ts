@@ -814,6 +814,13 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
               "$ref": "#/rules@16"
             },
             "arguments": []
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@23"
+            },
+            "arguments": []
           }
         ]
       },

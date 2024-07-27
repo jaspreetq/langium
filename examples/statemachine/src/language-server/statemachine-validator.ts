@@ -8,13 +8,14 @@ import type { ValidationAcceptor, ValidationChecks } from 'langium';
 import { type State, type Statemachine, type StatemachineAstType, type Event, type Attribute, isExpr, isBoolExpr, BoolLit } from './generated/ast.js';
 import type { StatemachineServices } from './statemachine-module.js';
 import { MultiMap } from 'langium';
+import { evalBoolExprWithEnv } from '../cli/interpreter.js';
 
 export function registerValidationChecks(services: StatemachineServices) {
     const registry = services.validation.ValidationRegistry;
     const validator = services.validation.StatemachineValidator;
     const checks: ValidationChecks<StatemachineAstType> = {
         State: validator.checkStateNameStartsWithCapital,
-        Statemachine: validator.checkUniqueStatesEventsAndAttributes
+        Statemachine: validator.checkUniqueStatesEventsAndAttributes,
         // Attribute: validator.checkAttributeType,
     };
     registry.register(checks, validator);
@@ -59,19 +60,24 @@ export class StatemachineValidator {
     }
 
     checkAttributeType(attribute: Attribute, accept: ValidationAcceptor): void {
-        if (attribute.type) {
-            const type = attribute.type;
-            if (type !== 'int' && type !== 'bool') {
-                accept('error', `Unsupported attribute type: ${type}`, { node: attribute, property: 'type' });
-            } else if (type === 'int') {
-                if (!isExpr(attribute.defaultValue)) {
-                    accept('error', `Attribute value does not match the type: ${attribute.defaultValue?.$type}`, { node: attribute, property: 'defaultValue' });
-                }
-            } else {
-                if (isExpr(attribute.defaultValue)) {
-                    accept('error', `Attribute value does not match the type: ${attribute.defaultValue?.$type}`, { node: attribute, property: 'defaultValue' });
-                }
+        if (attribute.type && attribute.defaultValue) {
+            try {
+                evalBoolExprWithEnv(attribute.defaultValue, new Map());
+            } catch (error) {
+                console.log(error);
             }
+            // const type = attribute.type;
+            // if (type !== 'int' && type !== 'bool') {
+            //     accept('error', `Unsupported attribute type: ${type}`, { node: attribute, property: 'type' });
+            // } else if (type === 'int') {
+            //     if (!isLit(attribute.defaultValue) && !isExpr(attribute.defaultValue) && isRef(attribute.defaultValue)) {
+            //         accept('error', `Attribute value does not match the type: ${attribute.defaultValue?.$type}`, { node: attribute, property: 'defaultValue' });
+            //     }
+            // } else {
+            //     if (isExpr(attribute.defaultValue)) {
+            //         accept('error', `Attribute value does not match the type: ${attribute.defaultValue?.$type}`, { node: attribute, property: 'defaultValue' });
+            //     }
+            // }
         }
 
     }

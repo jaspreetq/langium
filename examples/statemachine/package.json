@@ -54,7 +54,11 @@
         "lint": "eslint src test --ext ts",
         "langium:generate": "langium generate",
         "publish:next": "npm --no-git-tag-version version \"$(semver $npm_package_version -i minor)-next.$(git rev-parse --short HEAD)\" && npm publish --tag next",
-        "publish:latest": "npm publish --tag latest --access public"
+        "publish:latest": "npm publish --tag latest --access public",
+        "build:worker": "esbuild --minify ./out/language-server/main-browser.js --bundle --format=iife --outfile=./public/statemachine-server-worker.js",
+        "serve": "node ./out/web/app.js",
+        "prepare:public": "node scripts/prepare-public.mjs",
+        "build:web": "npm run build && npm run prepare:public && npm run build:worker && node scripts/copy-monaco-assets.mjs"
     },
     "dependencies": {
         "chalk": "~5.3.0",
@@ -62,11 +66,11 @@
         "langium": "~3.1.0",
         "monaco-editor-workers": "^0.45.0",
         "monaco-editor-wrapper": "~4.0.1",
+        "vscode-jsonrpc": "~8.2.0",
         "vscode-languageclient": "~9.0.1",
         "vscode-languageserver": "~9.0.1",
         "vscode-languageserver-protocol": "~3.17.5",
-        "vscode-languageserver-types": "~3.17.5",
-        "vscode-jsonrpc": "~8.2.0"
+        "vscode-languageserver-types": "~3.17.5"
     },
     "devDependencies": {
         "@types/node": "^20.14.9",

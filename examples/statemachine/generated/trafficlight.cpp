@@ -32,7 +32,7 @@ class TrafficLight {
 private:
     State* state = nullptr;
 public:
-    int cnt = 89;
+    int cnt = -89;
     bool isEmpty = ((cnt > 10) || (cnt < (20 - 7)));
     bool checkDefault = false;
     TrafficLight(State* initial_state) {
@@ -90,10 +90,10 @@ public:
 
     void PowerOff::switchCapacity() {
         if (true) {
-            std::cout << (statemachine->cnt > 10) << std::endl;
+            std::cout << (statemachine->cnt > (10 - 100)) << std::endl;
             statemachine->cnt = ((statemachine->cnt + 1) + (20 * ((statemachine->cnt + 1))));
-            std::cout << statemachine->cnt << std::endl;
-
+            std::cout << (statemachine->cnt - 23) << std::endl;
+            std::cout << "Run Command: testCommand()" << std::endl;
             std::cout << (statemachine->isEmpty && statemachine->checkDefault) << std::endl;
             statemachine->transition_to(new RedLight);
         } else {

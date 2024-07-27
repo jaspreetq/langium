@@ -17,7 +17,7 @@ export const StatemachineTerminals = {
     SL_COMMENT: /\/\/[^\n\r]*/,
 };
 
-export type BooleanPrimExpr = BoolGroup | BoolLit | BoolRef | Expr;
+export type BooleanPrimExpr = BoolGroup | BoolLit | BoolRef | Expr | NegExpr;
 
 export const BooleanPrimExpr = 'BooleanPrimExpr';
 
@@ -317,9 +317,11 @@ export class StatemachineAstReflection extends AbstractAstReflection {
             }
             case Group:
             case Lit:
-            case NegExpr:
             case Ref: {
                 return this.isSubtype(PrimExpr, supertype);
+            }
+            case NegExpr: {
+                return this.isSubtype(BooleanPrimExpr, supertype) || this.isSubtype(PrimExpr, supertype);
             }
             case PrimExpr: {
                 return this.isSubtype(Expr, supertype);

@@ -10,7 +10,7 @@ import * as path from 'node:path';
 import { type Generated, expandToNode as toNode, joinToNode as join, toString } from 'langium/generate';
 import { Action, Attribute, BoolExpr, Expr, isBinExpr, isBoolExpr, isBoolGroup, isBoolLit, isBoolRef, isExpr, isGroup, isLit, isNegExpr, isRef, Transition, type State, type Statemachine } from '../language-server/generated/ast.js';
 import { extractDestinationAndName } from './cli-util.js';
-import { env, evalBoolExprWithEnv, evalExprWithEnv, StatemachineEnv } from './interpreter.js';
+import { env, evalBoolExprWithEnv, StatemachineEnv } from './interpreter.js';
 // isExpr
 // For precise white space handling in generation template
 // we suggest you to enable the display of white space characters in your editor.
@@ -110,7 +110,7 @@ function generateStatemachineClass(ctx: GeneratorContext, env: StatemachineEnv):
             ${ctx.statemachine.name}(State* initial_state) {
                 initial_state->set_context(this);
                 state = initial_state;
-                std::cout << "[op" << state->get_name() <<  "]" << std::endl;
+                std::cout << "[" << state->get_name() <<  "]" << std::endl;
             }
 
             ~${ctx.statemachine.name}() {
@@ -159,7 +159,7 @@ function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv
                         ${attribute.type} ${attribute.name} = ${defaultValue};
             `;
     }
-    const defaultValueExprValue = attribute.type === 'int' ? evalExprWithEnv(attribute.defaultValue, env) : evalBoolExprWithEnv(attribute.defaultValue, env);
+    const defaultValueExprValue = attribute.type === 'int' ? evalBoolExprWithEnv(attribute.defaultValue, env) : evalBoolExprWithEnv(attribute.defaultValue, env);
 
     if ((attribute.type === 'int' && typeof defaultValueExprValue !== 'number') || (attribute.type === 'bool' && typeof defaultValueExprValue !== 'boolean')) {
         throw new Error(`Default value for attribute '${attribute.name}' is not of type ${attribute.type}.`);
@@ -181,7 +181,7 @@ function generateAction(action: Action, env: StatemachineEnv): string {
         const value = convertBoolExprToString(action.print.value, env, 'statemachine->');
         return `            std::cout << ${value} << std::endl;`;
     } else if (action.command) {
-        return `            Run Command: ${action.command.$refText}();`;
+        return `            std::cout << "Run Command: ${action.command.$refText}()" << std::endl;`;
     }
     return '';
 }
@@ -219,7 +219,7 @@ function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv, refSt
     if (isBoolExpr(e)) {
         evalBoolExprWithEnv(e, env);
     } else if (isExpr(e)) {
-        evalExprWithEnv(e, env);
+        evalBoolExprWithEnv(e, env);
     }
     if (isLit(e)) {
         return e.val.toString();
@@ -241,7 +241,7 @@ function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv, refSt
     } else if (isBoolGroup(e)) {
         return convertBoolExprToString(e.gbe, env, refString);
     } else if (isExpr(e)) {
-        return evalExprWithEnv(e, env).toString();
+        return evalBoolExprWithEnv(e, env).toString();
     } else if (isBoolRef(e)) {
         return refString + e.val.ref?.name ?? '';
     }

@@ -44,7 +44,7 @@ Conditional infers BoolExpr:
 Comparison infers BoolExpr:
     BooleanPrimExpr ({infer BinExpr.e1=current} op=('<=' | '<' | '>=' |  '>' | '==' | '!=') e2=BooleanPrimExpr)*;
 
-BooleanPrimExpr: BoolLit | BoolRef | BoolGroup |Expr;
+BooleanPrimExpr: BoolLit | BoolRef | BoolGroup |Expr | NegExpr;
 BoolLit: val=BOOL_VALUE;
 BoolRef: val=[Attribute:ID];
 BoolGroup: '(' gbe=BoolExpr ')';
