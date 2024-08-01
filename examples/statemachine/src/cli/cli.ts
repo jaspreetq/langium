@@ -4,7 +4,7 @@
  * terms of the MIT License, which is available in the project root.
  ******************************************************************************/
 
-import chalk from 'chalk';
+// import chalk from 'chalk';
 import { Command } from 'commander';
 import { NodeFileSystem } from 'langium/node';
 import type { Statemachine } from '../language-server/generated/ast.js';
@@ -17,6 +17,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { interpretStatemachine } from './interpreter.js';
 import { eventsAreValid } from './interpret-util.js';
+import chalk from 'chalk';
 
 export const interpret = async (fileName: string, eventNames: string[]): Promise<void> => {
     const services = createStatemachineServices(NodeFileSystem).statemachine;

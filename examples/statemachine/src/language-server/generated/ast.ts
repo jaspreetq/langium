@@ -12,41 +12,58 @@ export const StatemachineTerminals = {
     TYPE: /(int|bool)/,
     BOOL_VALUE: /(true|false)/,
     ID: /[_a-zA-Z][\w_]*/,
-    NUMBER: /[0-9]+(\.[0-9]*)?/,
+    NUMBER: /(?:(?:-?[0-9]+)?\.[0-9]+)|-?[0-9]+/,
+    STRING: /"([^"\\]|\\.)*"/,
     ML_COMMENT: /\/\*[\s\S]*?\*\//,
     SL_COMMENT: /\/\/[^\n\r]*/,
 };
 
-export type BooleanPrimExpr = BoolGroup | BoolLit | BoolRef | Expr | NegExpr;
+export type Comparison = BinExpr | PrimaryExpr;
 
-export const BooleanPrimExpr = 'BooleanPrimExpr';
+export const Comparison = 'Comparison';
 
-export function isBooleanPrimExpr(item: unknown): item is BooleanPrimExpr {
-    return reflection.isInstance(item, BooleanPrimExpr);
+export function isComparison(item: unknown): item is Comparison {
+    return reflection.isInstance(item, Comparison);
 }
 
-export type BoolExpr = BinExpr | BooleanPrimExpr;
+export type Conditional = BinExpr | Comparison;
 
-export const BoolExpr = 'BoolExpr';
+export const Conditional = 'Conditional';
 
-export function isBoolExpr(item: unknown): item is BoolExpr {
-    return reflection.isInstance(item, BoolExpr);
+export function isConditional(item: unknown): item is Conditional {
+    return reflection.isInstance(item, Conditional);
 }
 
-export type Expr = BinExpr | PrimExpr;
+export type Expression = Conditional;
 
-export const Expr = 'Expr';
+export const Expression = 'Expression';
 
-export function isExpr(item: unknown): item is Expr {
-    return reflection.isInstance(item, Expr);
+export function isExpression(item: unknown): item is Expression {
+    return reflection.isInstance(item, Expression);
 }
 
-export type PrimExpr = Group | Lit | NegExpr | Ref;
+export type NegExpr = NegBoolExpr | NegIntExpr;
 
-export const PrimExpr = 'PrimExpr';
+export const NegExpr = 'NegExpr';
 
-export function isPrimExpr(item: unknown): item is PrimExpr {
-    return reflection.isInstance(item, PrimExpr);
+export function isNegExpr(item: unknown): item is NegExpr {
+    return reflection.isInstance(item, NegExpr);
+}
+
+export type PrimaryExpr = Group | Literal | NegExpr | Ref;
+
+export const PrimaryExpr = 'PrimaryExpr';
+
+export function isPrimaryExpr(item: unknown): item is PrimaryExpr {
+    return reflection.isInstance(item, PrimaryExpr);
+}
+
+export type PrintValue = Expression | StringLiteral;
+
+export const PrintValue = 'PrintValue';
+
+export function isPrintValue(item: unknown): item is PrintValue {
+    return reflection.isInstance(item, PrintValue);
 }
 
 export interface Action extends AstNode {
@@ -65,8 +82,8 @@ export function isAction(item: unknown): item is Action {
 
 export interface Assignment extends AstNode {
     readonly $container: Action;
-    readonly $type: 'Assignment' | 'BinExpr' | 'Expr' | 'Group' | 'Lit' | 'NegExpr' | 'PrimExpr' | 'Ref';
-    value: BoolExpr;
+    readonly $type: 'Assignment';
+    value: Expression;
     variable: Reference<Attribute>;
 }
 
@@ -79,7 +96,7 @@ export function isAssignment(item: unknown): item is Assignment {
 export interface Attribute extends AstNode {
     readonly $container: Statemachine;
     readonly $type: 'Attribute';
-    defaultValue?: BoolExpr | Expr;
+    defaultValue?: Expression;
     name: string;
     type: string;
 }
@@ -91,10 +108,10 @@ export function isAttribute(item: unknown): item is Attribute {
 }
 
 export interface BinExpr extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Group | NegExpr | PrintStatement | Transition;
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegBoolExpr | NegIntExpr | PrintStatement | Transition;
     readonly $type: 'BinExpr';
-    e1: BoolExpr | BooleanPrimExpr | Expr | PrimExpr;
-    e2: BoolExpr | BooleanPrimExpr | Expr | PrimExpr;
+    e1: Comparison | PrimaryExpr;
+    e2: Comparison | PrimaryExpr;
     op: '!=' | '&&' | '*' | '+' | '-' | '/' | '<' | '<=' | '==' | '>' | '>=' | '||';
 }
 
@@ -102,42 +119,6 @@ export const BinExpr = 'BinExpr';
 
 export function isBinExpr(item: unknown): item is BinExpr {
     return reflection.isInstance(item, BinExpr);
-}
-
-export interface BoolGroup extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | PrintStatement | Transition;
-    readonly $type: 'BoolGroup';
-    gbe: BoolExpr;
-}
-
-export const BoolGroup = 'BoolGroup';
-
-export function isBoolGroup(item: unknown): item is BoolGroup {
-    return reflection.isInstance(item, BoolGroup);
-}
-
-export interface BoolLit extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | PrintStatement | Transition;
-    readonly $type: 'BoolLit';
-    val: boolean;
-}
-
-export const BoolLit = 'BoolLit';
-
-export function isBoolLit(item: unknown): item is BoolLit {
-    return reflection.isInstance(item, BoolLit);
-}
-
-export interface BoolRef extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | PrintStatement | Transition;
-    readonly $type: 'BoolRef';
-    val: Reference<Attribute>;
-}
-
-export const BoolRef = 'BoolRef';
-
-export function isBoolRef(item: unknown): item is BoolRef {
-    return reflection.isInstance(item, BoolRef);
 }
 
 export interface Command extends AstNode {
@@ -165,9 +146,9 @@ export function isEvent(item: unknown): item is Event {
 }
 
 export interface Group extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Group | NegExpr | PrintStatement | Transition;
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegBoolExpr | NegIntExpr | PrintStatement | Transition;
     readonly $type: 'Group';
-    ge: Expr;
+    ge: Expression;
 }
 
 export const Group = 'Group';
@@ -176,34 +157,46 @@ export function isGroup(item: unknown): item is Group {
     return reflection.isInstance(item, Group);
 }
 
-export interface Lit extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Group | NegExpr | PrintStatement | Transition;
-    readonly $type: 'Lit';
-    val: number;
+export interface Literal extends AstNode {
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegBoolExpr | NegIntExpr | PrintStatement | Transition;
+    readonly $type: 'Literal';
+    val: boolean | number;
 }
 
-export const Lit = 'Lit';
+export const Literal = 'Literal';
 
-export function isLit(item: unknown): item is Lit {
-    return reflection.isInstance(item, Lit);
+export function isLiteral(item: unknown): item is Literal {
+    return reflection.isInstance(item, Literal);
 }
 
-export interface NegExpr extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Group | NegExpr | PrintStatement | Transition;
-    readonly $type: 'NegExpr';
-    ne: Expr;
+export interface NegBoolExpr extends AstNode {
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegBoolExpr | NegIntExpr | PrintStatement | Transition;
+    readonly $type: 'NegBoolExpr';
+    ne: Expression;
 }
 
-export const NegExpr = 'NegExpr';
+export const NegBoolExpr = 'NegBoolExpr';
 
-export function isNegExpr(item: unknown): item is NegExpr {
-    return reflection.isInstance(item, NegExpr);
+export function isNegBoolExpr(item: unknown): item is NegBoolExpr {
+    return reflection.isInstance(item, NegBoolExpr);
+}
+
+export interface NegIntExpr extends AstNode {
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegBoolExpr | NegIntExpr | PrintStatement | Transition;
+    readonly $type: 'NegIntExpr';
+    ne: Expression;
+}
+
+export const NegIntExpr = 'NegIntExpr';
+
+export function isNegIntExpr(item: unknown): item is NegIntExpr {
+    return reflection.isInstance(item, NegIntExpr);
 }
 
 export interface PrintStatement extends AstNode {
     readonly $container: Action;
     readonly $type: 'PrintStatement';
-    value: BoolExpr | Expr;
+    values: Array<PrintValue>;
 }
 
 export const PrintStatement = 'PrintStatement';
@@ -213,7 +206,7 @@ export function isPrintStatement(item: unknown): item is PrintStatement {
 }
 
 export interface Ref extends AstNode {
-    readonly $container: Assignment | Attribute | BinExpr | BoolGroup | Group | NegExpr | PrintStatement | Transition;
+    readonly $container: Assignment | Attribute | BinExpr | Group | NegBoolExpr | NegIntExpr | PrintStatement | Transition;
     readonly $type: 'Ref';
     val: Reference<Attribute>;
 }
@@ -254,12 +247,24 @@ export function isStatemachine(item: unknown): item is Statemachine {
     return reflection.isInstance(item, Statemachine);
 }
 
+export interface StringLiteral extends AstNode {
+    readonly $container: PrintStatement;
+    readonly $type: 'StringLiteral';
+    value: string;
+}
+
+export const StringLiteral = 'StringLiteral';
+
+export function isStringLiteral(item: unknown): item is StringLiteral {
+    return reflection.isInstance(item, StringLiteral);
+}
+
 export interface Transition extends AstNode {
     readonly $container: State;
     readonly $type: 'Transition';
     actions: Array<Action>;
     event: Reference<Event>;
-    guard?: BoolExpr;
+    guard?: Expression;
     state: Reference<State>;
 }
 
@@ -274,57 +279,59 @@ export type StatemachineAstType = {
     Assignment: Assignment
     Attribute: Attribute
     BinExpr: BinExpr
-    BoolExpr: BoolExpr
-    BoolGroup: BoolGroup
-    BoolLit: BoolLit
-    BoolRef: BoolRef
-    BooleanPrimExpr: BooleanPrimExpr
     Command: Command
+    Comparison: Comparison
+    Conditional: Conditional
     Event: Event
-    Expr: Expr
+    Expression: Expression
     Group: Group
-    Lit: Lit
+    Literal: Literal
+    NegBoolExpr: NegBoolExpr
     NegExpr: NegExpr
-    PrimExpr: PrimExpr
+    NegIntExpr: NegIntExpr
+    PrimaryExpr: PrimaryExpr
     PrintStatement: PrintStatement
+    PrintValue: PrintValue
     Ref: Ref
     State: State
     Statemachine: Statemachine
+    StringLiteral: StringLiteral
     Transition: Transition
 }
 
 export class StatemachineAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [Action, Assignment, Attribute, BinExpr, BoolExpr, BoolGroup, BoolLit, BoolRef, BooleanPrimExpr, Command, Event, Expr, Group, Lit, NegExpr, PrimExpr, PrintStatement, Ref, State, Statemachine, Transition];
+        return [Action, Assignment, Attribute, BinExpr, Command, Comparison, Conditional, Event, Expression, Group, Literal, NegBoolExpr, NegExpr, NegIntExpr, PrimaryExpr, PrintStatement, PrintValue, Ref, State, Statemachine, StringLiteral, Transition];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
         switch (subtype) {
             case BinExpr: {
-                return this.isSubtype(BoolExpr, supertype) || this.isSubtype(Expr, supertype);
+                return this.isSubtype(Comparison, supertype) || this.isSubtype(Conditional, supertype);
             }
-            case BooleanPrimExpr: {
-                return this.isSubtype(BoolExpr, supertype);
+            case Comparison: {
+                return this.isSubtype(Conditional, supertype);
             }
-            case BoolGroup:
-            case BoolLit:
-            case BoolRef: {
-                return this.isSubtype(BooleanPrimExpr, supertype);
+            case Conditional: {
+                return this.isSubtype(Expression, supertype);
             }
-            case Expr: {
-                return this.isSubtype(Assignment, supertype) || this.isSubtype(BooleanPrimExpr, supertype);
+            case Expression:
+            case StringLiteral: {
+                return this.isSubtype(PrintValue, supertype);
             }
             case Group:
-            case Lit:
+            case Literal:
+            case NegExpr:
             case Ref: {
-                return this.isSubtype(PrimExpr, supertype);
+                return this.isSubtype(PrimaryExpr, supertype);
             }
-            case NegExpr: {
-                return this.isSubtype(BooleanPrimExpr, supertype) || this.isSubtype(PrimExpr, supertype);
+            case NegBoolExpr:
+            case NegIntExpr: {
+                return this.isSubtype(NegExpr, supertype);
             }
-            case PrimExpr: {
-                return this.isSubtype(Expr, supertype);
+            case PrimaryExpr: {
+                return this.isSubtype(Comparison, supertype);
             }
             default: {
                 return false;
@@ -339,7 +346,6 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                 return Command;
             }
             case 'Assignment:variable':
-            case 'BoolRef:val':
             case 'Ref:val': {
                 return Attribute;
             }
@@ -397,30 +403,6 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
-            case BoolGroup: {
-                return {
-                    name: BoolGroup,
-                    properties: [
-                        { name: 'gbe' }
-                    ]
-                };
-            }
-            case BoolLit: {
-                return {
-                    name: BoolLit,
-                    properties: [
-                        { name: 'val', defaultValue: false }
-                    ]
-                };
-            }
-            case BoolRef: {
-                return {
-                    name: BoolRef,
-                    properties: [
-                        { name: 'val' }
-                    ]
-                };
-            }
             case Command: {
                 return {
                     name: Command,
@@ -445,17 +427,25 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
-            case Lit: {
+            case Literal: {
                 return {
-                    name: Lit,
+                    name: Literal,
                     properties: [
-                        { name: 'val' }
+                        { name: 'val', defaultValue: false }
                     ]
                 };
             }
-            case NegExpr: {
+            case NegBoolExpr: {
                 return {
-                    name: NegExpr,
+                    name: NegBoolExpr,
+                    properties: [
+                        { name: 'ne' }
+                    ]
+                };
+            }
+            case NegIntExpr: {
+                return {
+                    name: NegIntExpr,
                     properties: [
                         { name: 'ne' }
                     ]
@@ -465,7 +455,7 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                 return {
                     name: PrintStatement,
                     properties: [
-                        { name: 'value' }
+                        { name: 'values', defaultValue: [] }
                     ]
                 };
             }
@@ -497,6 +487,14 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                         { name: 'init' },
                         { name: 'name' },
                         { name: 'states', defaultValue: [] }
+                    ]
+                };
+            }
+            case StringLiteral: {
+                return {
+                    name: StringLiteral,
+                    properties: [
+                        { name: 'value' }
                     ]
                 };
             }

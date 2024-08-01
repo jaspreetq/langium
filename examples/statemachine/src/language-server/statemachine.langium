@@ -3,7 +3,7 @@ grammar Statemachine
 entry Statemachine:
     'statemachine' name=ID
     ('events' events+=Event+)?
-    ('commands'    commands+=Command+)?
+    ('commands' commands+=Command+)?
     ('attributes' attributes+=Attribute+)?
     'initialState' init=[State]
     states+=State*;
@@ -21,53 +21,62 @@ State:
     'end';
 
 Transition:
-    event=[Event:ID] ('when' guard=BoolExpr)? '=>' state=[State] ('with' actions+=Action+)? 'end';
+    event=[Event:ID] ('when' guard=Expression)? '=>' state=[State] ('with{' actions+=Action+'}')? ';' ;
 
 Action:
     assignment=Assignment | print=PrintStatement | ('run' command=[Command]);
 
 PrintStatement:     
-    'print' '(' value=(BoolExpr|Expr) ')';
+    'print' '(' values+=PrintValue (',' values+=PrintValue)* ')';
+
+PrintValue:
+    StringLiteral | Expression;
+
+StringLiteral:
+    value=STRING;
 
 Assignment:
-     variable=[Attribute] '=' value=BoolExpr | Expr;
+    variable=[Attribute] '=' value=Expression;
 
 Attribute:
-    name=ID ':' type=TYPE ('=' defaultValue=(BoolExpr|Expr))?; // expression
-    
-// BoolExpr
-BoolExpr: Conditional;
+    name=ID ':' type=TYPE ('=' defaultValue=Expression)?;
 
-Conditional infers BoolExpr:
+// Expression: Unified rule for all types of expressions
+Expression:
+    Conditional;
+
+Conditional:
     Comparison ({infer BinExpr.e1=current} op=('||' | '&&') e2=Comparison)*;
 
-Comparison infers BoolExpr:
-    BooleanPrimExpr ({infer BinExpr.e1=current} op=('<=' | '<' | '>=' |  '>' | '==' | '!=') e2=BooleanPrimExpr)*;
+Comparison:
+    PrimaryExpr ({infer BinExpr.e1=current} op=('<=' | '<' | '>=' | '>' | '==' | '!=' | '+' | '-' | '*'| '/') e2=PrimaryExpr)*;
 
-BooleanPrimExpr: BoolLit | BoolRef | BoolGroup |Expr | NegExpr;
-BoolLit: val=BOOL_VALUE;
-BoolRef: val=[Attribute:ID];
-BoolGroup: '(' gbe=BoolExpr ')';
+PrimaryExpr:
+    Literal | Ref | Group | NegExpr;
 
-// Expressions
-Expr: Add; 
-Add  infers Expr: 
-    Mult     ({infer BinExpr.e1=current} op=('+'|'-') e2=Mult)*;
-Mult infers Expr: 
-    PrimExpr ({infer BinExpr.e1=current} op=('*'|'/') e2=PrimExpr)*;
+Literal:
+    val=NUMBER | val=BOOL_VALUE;
 
-PrimExpr: Lit | Ref | Group | NegExpr;
+Ref:
+    val=[Attribute:ID];
 
-Lit:        val=NUMBER ;
-Ref:        val=[Attribute:ID];
-Group:      '(' ge=Expr  ')';    
-NegExpr:    '-' ne=Expr;
+Group:
+    '(' ge=Expression ')';
+
+NegExpr:
+    NegIntExpr | NegBoolExpr;
+
+NegIntExpr:
+    '-' ne=Expression;
+
+NegBoolExpr:
+    '!' ne=Expression;
 
 hidden terminal WS: /\s+/;
 terminal TYPE returns string: 'int' | 'bool';
 terminal BOOL_VALUE returns boolean: 'true' | 'false';
 terminal ID: /[_a-zA-Z][\w_]*/;
-terminal NUMBER returns number: /[0-9]+(\.[0-9]*)?/;
-// terminal STRING returns string: /"([^"\\]|\\.)*"/;
+terminal NUMBER returns number:/(?:(?:-?[0-9]+)?\.[0-9]+)|-?[0-9]+/;
+terminal STRING returns string: /"([^"\\]|\\.)*"/;
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;

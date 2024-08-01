@@ -8,9 +8,12 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { type Generated, expandToNode as toNode, joinToNode as join, toString } from 'langium/generate';
-import { Action, Attribute, BoolExpr, Expr, isBinExpr, isBoolExpr, isBoolGroup, isBoolLit, isBoolRef, isExpr, isGroup, isLit, isNegExpr, isRef, Transition, type State, type Statemachine } from '../language-server/generated/ast.js';
+import { Action, Attribute, Expression, isBinExpr, isRef, isStringLiteral, Transition, type State, type Statemachine } from '../language-server/generated/ast.js';
 import { extractDestinationAndName } from './cli-util.js';
-import { env, evalBoolExprWithEnv, StatemachineEnv } from './interpreter.js';
+import { env, StatemachineEnv } from './interpreter.js';
+import { defaultAttributeValue, evalExpression, inferType } from './interpret-util.js';
+import { isNegExpr, isLiteral, isNegIntExpr, isNegBoolExpr, isGroup } from "../language-server/generated/ast.js";
+import chalk from 'chalk';
 // isExpr
 // For precise white space handling in generation template
 // we suggest you to enable the display of white space characters in your editor.
@@ -147,7 +150,7 @@ function generateStateDeclaration(ctx: GeneratorContext, state: State): Generate
 }
 
 function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv): Generated {
-    const defaultValue = attribute.type === 'int' ? 0 : false;
+    const defaultValue = defaultAttributeValue(attribute);
 
     if (attribute.type !== 'int' && attribute.type !== 'bool') {
         throw new Error(`Unsupported attribute type: ${attribute.type}`);
@@ -159,7 +162,8 @@ function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv
                         ${attribute.type} ${attribute.name} = ${defaultValue};
             `;
     }
-    const defaultValueExprValue = attribute.type === 'int' ? evalBoolExprWithEnv(attribute.defaultValue, env) : evalBoolExprWithEnv(attribute.defaultValue, env);
+
+    const defaultValueExprValue = evalExpression(attribute.defaultValue, env);
 
     if ((attribute.type === 'int' && typeof defaultValueExprValue !== 'number') || (attribute.type === 'bool' && typeof defaultValueExprValue !== 'boolean')) {
         throw new Error(`Default value for attribute '${attribute.name}' is not of type ${attribute.type}.`);
@@ -178,8 +182,14 @@ function generateAction(action: Action, env: StatemachineEnv): string {
         const value = convertBoolExprToString(action.assignment.value, env, 'statemachine->');
         return `            statemachine->${variableName} = ${value};`;
     } else if (action.print) {
-        const value = convertBoolExprToString(action.print.value, env, 'statemachine->');
-        return `            std::cout << ${value} << std::endl;`;
+        const values = action.print.values.map(value => {
+            if (isStringLiteral(value)) {
+                return `"${value.value}"`;  // Assuming value.val contains the string content
+            } else {
+                return convertBoolExprToString(value, env, 'statemachine->');
+            }
+        });
+        return `            std::cout << ${values.join(' << ')} << std::endl;`;
     } else if (action.command) {
         return `            std::cout << "Run Command: ${action.command.$refText}()" << std::endl;`;
     }
@@ -187,7 +197,7 @@ function generateAction(action: Action, env: StatemachineEnv): string {
 }
 
 function generateTransition(transition: Transition, stateName: string, env: StatemachineEnv): string {
-    if (transition.guard !== undefined && typeof evalBoolExprWithEnv(transition.guard, env) !== 'boolean') {
+    if (transition.guard !== undefined && typeof evalExpression(transition.guard, env) !== 'boolean') {
         throw new Error('Guard condition must be a boolean expression');
     }
 
@@ -215,15 +225,16 @@ function generateStateDefinition(ctx: GeneratorContext, state: State, env: State
     `;
 }
 
-function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv, refString: string): string {
-    if (isBoolExpr(e)) {
-        evalBoolExprWithEnv(e, env);
-    } else if (isExpr(e)) {
-        evalBoolExprWithEnv(e, env);
-    }
-    if (isLit(e)) {
+function convertBoolExprToString(e: Expression, env: StatemachineEnv, refString: string): string {
+    e && inferType(e, env);
+
+    if (isLiteral(e)) {
         return e.val.toString();
     } else if (isRef(e)) {
+        // Write code to throw an error if the reference is not defined in the current scope, throw an error i.e.
+        if (!e.val.ref || !env.has(e.val.$refText)) {
+            throw new Error(`${e.val.$refText} Reference is undefined in this scope`);
+        }
         return refString + e.val.ref?.name ?? '';
     } else if (isBinExpr(e)) {
         let op = e.op;
@@ -231,21 +242,18 @@ function convertBoolExprToString(e: BoolExpr | Expr, env: StatemachineEnv, refSt
         let right = convertBoolExprToString(e.e2, env, refString);
         return `(${left} ${op} ${right})`;
     } else if (isNegExpr(e)) {
-        let expr = convertBoolExprToString(e.ne, env, refString);
-        return `-${expr}`;
+        if (isNegIntExpr(e)) {
+            const expr = convertBoolExprToString(e.ne, env, refString);
+            return `-${expr}`;
+        } else if (isNegBoolExpr(e)) {
+            const expr = convertBoolExprToString(e.ne, env, refString);
+            return `!${expr}`;
+        }
     } else if (isGroup(e)) {
         let expr = convertBoolExprToString(e.ge, env, refString);
         return `(${expr})`;
-    } else if (isBoolLit(e)) {
-        return e.val.toString();
-    } else if (isBoolGroup(e)) {
-        return convertBoolExprToString(e.gbe, env, refString);
-    } else if (isExpr(e)) {
-        return evalBoolExprWithEnv(e, env).toString();
-    } else if (isBoolRef(e)) {
-        return refString + e.val.ref?.name ?? '';
     }
-    throw new Error('Unhandled Expression: ' + e);
+    throw new Error(chalk.red('Unhandled Expression: ' + e));
 }
 
 function generateMain(ctx: GeneratorContext, env: StatemachineEnv): Generated {

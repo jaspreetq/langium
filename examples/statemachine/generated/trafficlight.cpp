@@ -32,13 +32,14 @@ class TrafficLight {
 private:
     State* state = nullptr;
 public:
-    int cnt = -89;
-    bool isEmpty = ((cnt > 10) || (cnt < (20 - 7)));
-    bool checkDefault = false;
+    int cnt = (-89 / 12);
+    bool isOut = (true == false);
+    bool isEmpty = (((((12 == cnt) || (cnt > 0))) && (cnt < 100)) || !isOut);
+    bool checkDefault = (true == isEmpty);
     TrafficLight(State* initial_state) {
         initial_state->set_context(this);
         state = initial_state;
-        std::cout << "[op" << state->get_name() <<  "]" << std::endl;
+        std::cout << "[" << state->get_name() <<  "]" << std::endl;
     }
 
     ~TrafficLight() {
@@ -90,11 +91,9 @@ public:
 
     void PowerOff::switchCapacity() {
         if (true) {
-            std::cout << (statemachine->cnt > (10 - 100)) << std::endl;
-            statemachine->cnt = ((statemachine->cnt + 1) + (20 * ((statemachine->cnt + 1))));
-            std::cout << (statemachine->cnt - 23) << std::endl;
             std::cout << "Run Command: testCommand()" << std::endl;
-            std::cout << (statemachine->isEmpty && statemachine->checkDefault) << std::endl;
+            std::cout << statemachine->cnt << "Value of Cnt is :" << statemachine->cnt << " A random Expression with refs in it:" << (statemachine->isEmpty && ((23 < ((((statemachine->cnt + statemachine->cnt) / (((statemachine->cnt - statemachine->cnt) + 1))) + 1))))) << ((statemachine->cnt * 23) - 24) << std::endl;
+            std::cout << statemachine->isOut << std::endl;
             statemachine->transition_to(new RedLight);
         } else {
             std::cout << "Transition not allowed." << std::endl;
@@ -104,11 +103,12 @@ public:
     // RedLight
 
     void RedLight::switchCapacity() {
-        if (((12 + (32 * 30)) > statemachine->cnt)) {
+        if (((((12 + 32) * 30) > statemachine->cnt))) {
+            std::cout << "Run Command: testCommand()" << std::endl;
             std::cout << (statemachine->cnt > 10) << std::endl;
-            statemachine->cnt = ((statemachine->cnt + 1) + (20 * ((statemachine->cnt + 1))));
+            statemachine->cnt = (((statemachine->cnt + 1) + 20) * ((statemachine->cnt + 1)));
             std::cout << statemachine->cnt << std::endl;
-            std::cout << (statemachine->isEmpty && statemachine->checkDefault) << std::endl;
+            std::cout << (((statemachine->cnt + statemachine->cnt) / (((statemachine->cnt - statemachine->cnt) + 1))) + 1) << std::endl;
             statemachine->transition_to(new PowerOff);
         } else {
             std::cout << "Transition not allowed." << std::endl;

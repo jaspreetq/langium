@@ -1,19 +1,20 @@
 // Monarch syntax highlighting for the statemachine language.
 export default {
     keywords: [
-        'actions','attributes','commands','end','events','initialState','print','run','state','statemachine','when','with'
+        'actions','attributes','commands','end','events','initialState','print','run','state','statemachine','when','with{'
     ],
     operators: [
-        '!=','&&','*','+','-','/',':','<','<=','=','==','=>','>','>=','||'
+        '!','!=','&&','*','+',',','-','/',':',';','<','<=','=','==','=>','>','>=','||'
     ],
-    symbols: /!=|&&|\(|\)|\*|\+|-|\/|:|<|<=|=|==|=>|>|>=|\{|\|\||\}/,
+    symbols: /!|!=|&&|\(|\)|\*|\+|,|-|\/|:|;|<|<=|=|==|=>|>|>=|\{|\|\||\}/,
 
     tokenizer: {
         initial: [
             { regex: /(int|bool)/, action: { cases: { '@keywords': {"token":"keyword"}, '@default': {"token":"string"} }} },
             { regex: /(true|false)/, action: {"token":"boolean"} },
             { regex: /[_a-zA-Z][\w_]*/, action: { cases: { '@keywords': {"token":"keyword"}, '@default': {"token":"ID"} }} },
-            { regex: /[0-9]+(\.[0-9]*)?/, action: {"token":"number"} },
+            { regex: /(?:(?:-?[0-9]+)?\.[0-9]+)|-?[0-9]+/, action: {"token":"number"} },
+            { regex: /"([^"\\]|\\.)*"/, action: {"token":"string"} },
             { include: '@whitespace' },
             { regex: /@symbols/, action: { cases: { '@operators': {"token":"operator"}, '@default': {"token":""} }} },
         ],

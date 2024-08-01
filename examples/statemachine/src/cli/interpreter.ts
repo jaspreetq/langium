@@ -1,9 +1,13 @@
 import chalk from 'chalk';
-import { Attribute, Command, Event, State, Transition, Action, BoolExpr, Expr, isLit, isRef, isBoolLit, isBoolRef, isBoolGroup, isBinExpr, isNegExpr, isGroup, Statemachine } from './../language-server/generated/ast.js';
-import { defaultAttributeValue } from './interpret-util.js';
+import { Attribute, Command, Event, State, Transition, Action, Statemachine, isStringLiteral } from './../language-server/generated/ast.js';
+import { defaultAttributeValue, evalExpression, inferType } from './interpret-util.js';
 
-export type StatemachineEnv = Map<string, number | boolean | undefined>;
+export type StatemachineEnv = Map<string, number | boolean>;
+export type AttributeEnv = Map<string, string[]>;
 export const env: StatemachineEnv = new Map();
+export const attributeEnv: AttributeEnv = new Map();
+export const uniqueAttributeNames = new Set<string>();
+export const attributeNames: string[] = [];
 
 interface ExecutionContext {
     currentState: State | undefined;
@@ -14,95 +18,30 @@ interface ExecutionContext {
     states: State[];
 }
 
-export function evalBoolExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): any {
-    if (e === undefined) {
-        throw new Error('Undefined expression');
-    } else if (isBoolLit(e)) {
-        return e.val ?? false;
-    } else if (isBoolRef(e)) {
-        const v = env.get(e.val.ref?.name ?? '');
-        if (v !== undefined) {
-            return v;
-        }
-        throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
-    } else if (isBoolGroup(e)) {
-        return evalBoolExprWithEnv(e.gbe, env);
-    } else if (isLit(e)) {
-        return e.val;
-    } else if (isRef(e)) {
-        const v = env.get(e.val.ref?.name ?? '');
-        if (typeof v === 'boolean') {
-            throw new Error(e.val.error?.message ?? `Boolean attribute being accessed in a non-boolean expression.`);
-        } else if (v !== undefined) {
-            return v;
-        }
-        throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
-    } else if (isNegExpr(e)) {
-        return -1 * evalBoolExprWithEnv(e.ne, env);
-    } else if (isGroup(e)) {
-        return evalBoolExprWithEnv(e.ge, env);
-    } else if (isBinExpr(e)) {
-        let opval = e.op;
-        let v1 = evalBoolExprWithEnv(e.e1, env);
-        let v2 = evalBoolExprWithEnv(e.e2, env);
-
-        const leftType = typeof v1;
-        const rightType = typeof v2;
-        if (leftType != rightType) {
-            console.log(`Type sd mismatch: ${leftType} ${e.op} ${rightType} ${v1} ${v2}`);
-            throw new Error(`Type sd mismatch: ${leftType} ${e.op} ${rightType}`);
-        }
-        if (e.op === '||' || e.op === '&&') {
-            if (leftType !== 'boolean' || rightType !== 'boolean') {
-                throw new Error(`Invalid types for boolean operation: ${leftType} ${e.op} ${rightType}`);
-            }
-            return e.op === '||' ? v1 || v2 : v1 && v2;
-        }
-        if (e.op === '!=' || e.op === '==') {
-            if (leftType === 'boolean' && rightType === 'boolean') {
-                return e.op === '==' ? v1 === v2 : v1 !== v2;
-            }
-        }
-        if ((typeof v1 === 'number' && typeof v2 === 'number' && (['<', '>', '<=', '>=', '==', '!=', '/', '*', '+', '-'].includes(opval)))) {
-            switch (opval) {
-                case '<': return v1 < v2;
-                case '>': return v1 > v2;
-                case '<=': return v1 <= v2;
-                case '>=': return v1 >= v2;
-                case '==': return v1 === v2;
-                case '!=': return v1 !== v2;
-                case '/': return v1 / v2;
-                case '*': return v1 * v2;
-                case '+': return v1 + v2;
-                case '-': return v1 - v2;
-                default: throw new Error(`Unrecognized bin op passed: ${opval}`);
-            }
-        } else {
-            throw new Error(`Unrecognized bin op passed: ${opval}`);
-        }
-    }
-    throw new Error('Unhandled Boolean Expression: ' + e);
-}
 
 function executeAction(action: Action, context: ExecutionContext): void {
     if (action.assignment) {
         const variableName = action.assignment.variable.ref?.name;
         if (variableName) {
-            const value = evalBoolExprWithEnv(action.assignment.value, context.env);
+            const value = evalExpression(action.assignment.value, context.env);
             context.env.set(variableName, value);
         }
     } else if (action.print) {
-        const value = action.print.value;
-        if (value) {
-            console.log(evalBoolExprWithEnv(value, context.env));
-        }
+        const values = action.print.values.map(value => {
+            if (isStringLiteral(value)) {
+                return value.value;  // Assuming value.val contains the string content
+            } else {
+                return evalExpression(value, context.env);
+            }
+        });
+        console.log(values.join(''));
     } else if (action.command) {
         console.log(`Executing command: ${action.command.ref?.name}`);
     }
 }
 
 function executeTransition(transition: Transition, context: ExecutionContext): void {
-    if (transition.guard && !evalBoolExprWithEnv(transition.guard, context.env)) {
+    if (transition.guard && !evalExpression(transition.guard, context.env)) {
         console.log(chalk.yellow(`Guard failed for transition from ${context.currentState?.name} to ${transition.state?.ref?.name} due to guard condition.`));
         return;
     }
@@ -129,7 +68,8 @@ function handleEvents(context: ExecutionContext): void {
 
 function interpretModel(model: Statemachine) {
     const attributes = model.attributes.map((attribute: Attribute) => {
-        const attributeValue = attribute.defaultValue ? evalBoolExprWithEnv(attribute.defaultValue, env) : defaultAttributeValue(attribute);
+        attribute.defaultValue && inferType(attribute.defaultValue, env);
+        const attributeValue = attribute.defaultValue ? evalExpression(attribute.defaultValue, env) : defaultAttributeValue(attribute);
         env.set(attribute.name, attributeValue);
         return {
             ...attribute,
@@ -208,3 +148,79 @@ export function interpretStatemachine(model: Statemachine, eventQueue: string[])
     console.log('Current State: ' + chalk.green(`[${context.currentState.name}]`));
     console.log(chalk.green('Interpretation completed succesfully!'));
 }
+// try {
+//     console.log('Entering try block');
+// }
+// catch (error) {
+//     console.log('Entering catch block');
+//     console.error('error', (error as Error).message, { node: attribute, property: 'defaulValue' });
+// }
+// export function evalBoolExprWithEnv(e: BoolExpr | Expr, env: StatemachineEnv): any {
+//     if (e === undefined) {
+//         throw new Error('Undefined expression');
+//     } else if (isBoolLit(e)) {
+//         return e.val ?? false;
+//     } else if (isBoolRef(e)) {
+//         const v = env.get(e.val.ref?.name ?? '');
+//         if (v !== undefined) {
+//             return v;
+//         }
+//         throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
+//     } else if (isBoolGroup(e)) {
+//         return evalBoolExprWithEnv(e.gbe, env);
+//     } else if (isLit(e)) {
+//         return e.val;
+//     } else if (isRef(e)) {
+//         const v = env.get(e.val.ref?.name ?? '');
+//         if (typeof v === 'boolean') {
+//             throw new Error(e.val.error?.message ?? `Boolean attribute being accessed in a non-boolean expression.`);
+//         } else if (v !== undefined) {
+//             return v;
+//         }
+//         throw new Error(e.val.error?.message ?? `Attempted to lookup an unbound reference '${v}${e.val.$refText}' in the env.`);
+//     } else if (isNegExpr(e)) {
+//         return -1 * evalBoolExprWithEnv(e.ne, env);
+//     } else if (isGroup(e)) {
+//         return evalBoolExprWithEnv(e.ge, env);
+//     } else if (isBinExpr(e)) {
+//         let opval = e.op;
+//         let v1 = evalBoolExprWithEnv(e.e1, env);
+//         let v2 = evalBoolExprWithEnv(e.e2, env);
+
+//         const leftType = typeof v1;
+//         const rightType = typeof v2;
+//         if (leftType != rightType) {
+//             console.log(`Type sd mismatch: ${leftType} ${e.op} ${rightType} ${v1} ${v2}`);
+//             throw new Error(`Type sd mismatch: ${leftType} ${e.op} ${rightType}`);
+//         }
+//         if (e.op === '||' || e.op === '&&') {
+//             if (leftType !== 'boolean' || rightType !== 'boolean') {
+//                 throw new Error(`Invalid types for boolean operation: ${leftType} ${e.op} ${rightType}`);
+//             }
+//             return e.op === '||' ? v1 || v2 : v1 && v2;
+//         }
+//         if (e.op === '!=' || e.op === '==') {
+//             if (leftType === 'boolean' && rightType === 'boolean') {
+//                 return e.op === '==' ? v1 === v2 : v1 !== v2;
+//             }
+//         }
+//         if ((typeof v1 === 'number' && typeof v2 === 'number' && (['<', '>', '<=', '>=', '==', '!=', '/', '*', '+', '-'].includes(opval)))) {
+//             switch (opval) {
+//                 case '<': return v1 < v2;
+//                 case '>': return v1 > v2;
+//                 case '<=': return v1 <= v2;
+//                 case '>=': return v1 >= v2;
+//                 case '==': return v1 === v2;
+//                 case '!=': return v1 !== v2;
+//                 case '/': return v1 / v2;
+//                 case '*': return v1 * v2;
+//                 case '+': return v1 + v2;
+//                 case '-': return v1 - v2;
+//                 default: throw new Error(`Unrecognized bin op passed: ${opval}`);
+//             }
+//         } else {
+//             throw new Error(`Unrecognized bin op passed: ${opval}`);
+//         }
+//     }
+//     throw new Error('Unhandled Boolean Expression: ' + e);
+// }

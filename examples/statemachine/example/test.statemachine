@@ -1,37 +1,68 @@
-statemachine TrafficLight
+statemachine HomeAutomation
 
 events 
-    switchCapacity
-    next
+    motionDetected
+    noMotion
+    lightOn
+    lightOff
+    temperatureRise
+    temperatureDrop
 commands
-    printExt
-    testCommand
+    turnOnLights
+    turnOffLights
+    startHeating
+    stopHeating
 
 attributes
-    cnt : int = 89
-    isEmpty : bool = cnt > 10 || cnt < 20 -7
-    checkDefault : bool
+    isMotionDetected : bool = false
+    isLightOn : bool = false
+    currentTemperature : int = 22
+    targetTemperature : int = 24
 
-initialState PowerOff
+initialState Idle
 
-state PowerOff
-    switchCapacity when true => RedLight 
-    with 
-        print(10)
-    end
+state Idle
+    motionDetected when isMotionDetected => MotionDetected with{
+        print("Motion Detected, turning on lights")
+        run turnOnLights
+    };
+    noMotion => Idle;
+    temperatureRise => Heating;
+    temperatureDrop => Idle
+    with{
+        print("System is Idle, Motion: ", isMotionDetected)
+    };
 end
 
-state RedLight
-    switchCapacity => PowerOff end
-    next => GreenLight end
+state MotionDetected
+    motionDetected when isMotionDetected => Idle;
+    lightOn => LightOn
+    with{
+        print("Lights are ON, Motion: ", isMotionDetected)
+    };
+    lightOff => Idle;
+    temperatureRise => Heating;
+    temperatureDrop => Idle
+    with{
+        print("Motion Detected, turning on lights")
+        run turnOnLights
+    };
 end
 
-state YellowLight
-    switchCapacity => PowerOff end
-    next => RedLight end
+state LightOn
+    noMotion => Idle;
+    lightOff => Idle;
+    temperatureRise => Heating;
+    temperatureDrop => Idle;
 end
 
-state GreenLight
-    switchCapacity => PowerOff end
-    next => YellowLight end
+state Heating
+    temperatureDrop when currentTemperature < targetTemperature => Idle;
+    temperatureRise => Heating;
+    lightOn => LightOn;
+    lightOff => Idle
+    with{
+        print("Heating the home, Current Temperature: ", currentTemperature)
+        run startHeating
+    };
 end

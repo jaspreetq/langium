@@ -8,40 +8,40 @@ commands
     testCommand
 
 attributes
-    cnt : int = -89
-    isEmpty : bool = 24 - 2 < checkDefault
-    checkDefault : bool
-
+    cnt : int = -89/12
+    isOut : bool = true == false
+    isEmpty : bool = (12 == cnt || cnt > 0) && cnt < 100 || !isOut
+    checkDefault: bool = true == isEmpty
+    
 initialState PowerOff
 
 state PowerOff
-    switchCapacity when true => RedLight 
-    with 
-        print(true > 10 - 100)
-        cnt = cnt + 1 + 20*(cnt+1)
-        print(cnt - 23)
+    switchCapacity when true => RedLight
+    with{
         run testCommand
-        print(isEmpty && checkDefault)
-    end
+        print(cnt,"Value of Cnt is :", cnt, " A random Expression with refs in it:", isEmpty && (23 < (cnt + cnt/(cnt - cnt +1) + 1)), cnt * 23 - 24)
+        print(isOut)
+    };
 end
 
 state RedLight
     switchCapacity when (12+32*30 > cnt) => PowerOff 
-    with 
+    with{
+        run testCommand
         print(cnt > 10)
-        cnt = cnt + 1 + 20*(cnt+1) 
+        cnt = cnt + 1 + 20*(cnt+1)
         print(cnt)
-        print(isEmpty && checkDefault)
-    end
-    next => GreenLight end
-end
+        print( cnt + cnt/(cnt - cnt +1) + 1)
+    };
+    next => GreenLight;
+end 
 
 state YellowLight
-    switchCapacity => PowerOff end
-    next => RedLight end
+    switchCapacity => PowerOff ;
+    next => RedLight ;
 end
 
 state GreenLight
-    switchCapacity => PowerOff end
-    next => YellowLight end
+    switchCapacity => PowerOff ;
+    next => YellowLight ;
 end
