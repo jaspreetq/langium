@@ -1,3 +1,4 @@
+import * as readline from 'node:readline/promises';
 import chalk from 'chalk';
 import { Attribute, Command, Event, State, Transition, Action, Statemachine, isStringLiteral } from './../language-server/generated/ast.js';
 import { defaultAttributeValue, evalExpression, inferType } from './interpret-util.js';
@@ -5,7 +6,6 @@ import { defaultAttributeValue, evalExpression, inferType } from './interpret-ut
 export type StatemachineEnv = Map<string, number | boolean>;
 export type AttributeEnv = Map<string, string[]>;
 export const env: StatemachineEnv = new Map();
-export const attributeEnv: AttributeEnv = new Map();
 export const uniqueAttributeNames = new Set<string>();
 export const attributeNames: string[] = [];
 
@@ -41,8 +41,12 @@ function executeAction(action: Action, context: ExecutionContext): void {
 }
 
 function executeTransition(transition: Transition, context: ExecutionContext): void {
-    if (transition.guard && !evalExpression(transition.guard, context.env)) {
-        console.log(chalk.yellow(`Guard failed for transition from ${context.currentState?.name} to ${transition.state?.ref?.name} due to guard condition.`));
+    const guardExpression = (transition.guard && evalExpression(transition.guard, context.env)) ?? true;
+    if (transition.guard && typeof guardExpression !== 'boolean') {
+        throw new Error(`Guard expression must evaluate to a boolean value. Got ${guardExpression} instead.`);
+    }
+    if (transition.guard && !guardExpression) {
+        console.log(chalk.yellow(`Transition failed from ${context.currentState?.name} to ${transition.state?.ref?.name} due to guard condition evaluating to false.`));
         return;
     }
     const oldState = context.currentState?.name;
@@ -113,13 +117,12 @@ function interpretModel(model: Statemachine) {
     };
 }
 
-
-export function interpretStatemachine(model: Statemachine, eventQueue: string[]): void {
+export async function interpretStatemachine(model: Statemachine): Promise<void> {
     const interpretedModel = interpretModel(model);
-    // interpretedModel.attributes.forEach((attribute: any) => { env.set(attribute.name, attribute.defaultValue); });
+
     const context: ExecutionContext = {
         currentState: interpretedModel.initialState,
-        events: [], // Events passed or called in the terminal
+        events: [],
         env: env,
         commands: interpretedModel.commands,
         attributes: interpretedModel.attributes,
@@ -130,24 +133,64 @@ export function interpretStatemachine(model: Statemachine, eventQueue: string[])
         throw new Error("Initial state is undefined.");
     }
 
-    eventQueue.forEach(eventName => {
-        const event = interpretedModel.events.find(e => e.name === eventName);
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    console.log(chalk.green(`Starting state: [${context.currentState.name}]`));
+
+    rl.on('line', (input) => {
+        const event = interpretedModel.events.find(e => e.name === input.trim());
         if (event) {
             context.events.push(event);
+            handleEvents(context);
+            console.log(chalk.green(`Current State: [${context.currentState?.name}]`));
         } else {
-            console.error(`Event ${eventName} not found in the model.`);
+            console.error(`Event ${input} not found in the model.`);
         }
     });
 
-    while (context.currentState && context.events.length > 0) {
-        console.log(chalk.green(`[${context.currentState.name}]`));
-        handleEvents(context);
-    }
+    rl.on('close', () => {
+        console.log(chalk.green('Interpretation completed successfully!'));
+    });
 
-
-    console.log('Current State: ' + chalk.green(`[${context.currentState.name}]`));
-    console.log(chalk.green('Interpretation completed succesfully!'));
+    console.log('Enter events to trigger the statemachine (type "exit" to quit):');
 }
+// export function interpretStatemachine(model: Statemachine, eventQueue: string[]): void {
+//     const interpretedModel = interpretModel(model);
+//     // interpretedModel.attributes.forEach((attribute: any) => { env.set(attribute.name, attribute.defaultValue); });
+//     const context: ExecutionContext = {
+//         currentState: interpretedModel.initialState,
+//         events: [], // Events passed or called in the terminal
+//         env: env,
+//         commands: interpretedModel.commands,
+//         attributes: interpretedModel.attributes,
+//         states: interpretedModel.states
+//     };
+
+//     if (!context.currentState) {
+//         throw new Error("Initial state is undefined.");
+//     }
+
+//     eventQueue.forEach(eventName => {
+//         const event = interpretedModel.events.find(e => e.name === eventName);
+//         if (event) {
+//             context.events.push(event);
+//         } else {
+//             console.error(`Event ${eventName} not found in the model.`);
+//         }
+//     });
+
+//     while (context.currentState && context.events.length > 0) {
+//         console.log(chalk.green(`[${context.currentState.name}]`));
+//         handleEvents(context);
+//     }
+
+
+//     console.log('Current State: ' + chalk.green(`[${context.currentState.name}]`));
+//     console.log(chalk.green('Interpretation completed succesfully!'));
+// }
 // try {
 //     console.log('Entering try block');
 // }

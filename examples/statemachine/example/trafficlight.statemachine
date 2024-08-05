@@ -9,8 +9,8 @@ commands
 
 attributes
     cnt : int = -89/12
-    isOut : bool = true == false
-    isEmpty : bool = (12 == cnt || cnt > 0) && cnt < 100 || !isOut
+    isEmpty : bool = (12 == cnt || cnt > 0) && cnt < 100
+    isOut : bool = true == false || !isEmpty
     checkDefault: bool = true == isEmpty
     
 initialState PowerOff

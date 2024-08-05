@@ -18,23 +18,7 @@ export const StatemachineTerminals = {
     SL_COMMENT: /\/\/[^\n\r]*/,
 };
 
-export type Comparison = BinExpr | PrimaryExpr;
-
-export const Comparison = 'Comparison';
-
-export function isComparison(item: unknown): item is Comparison {
-    return reflection.isInstance(item, Comparison);
-}
-
-export type Conditional = BinExpr | Comparison;
-
-export const Conditional = 'Conditional';
-
-export function isConditional(item: unknown): item is Conditional {
-    return reflection.isInstance(item, Conditional);
-}
-
-export type Expression = Conditional;
+export type Expression = BinExpr | PrimaryExpr;
 
 export const Expression = 'Expression';
 
@@ -110,8 +94,8 @@ export function isAttribute(item: unknown): item is Attribute {
 export interface BinExpr extends AstNode {
     readonly $container: Assignment | Attribute | BinExpr | Group | NegBoolExpr | NegIntExpr | PrintStatement | Transition;
     readonly $type: 'BinExpr';
-    e1: Comparison | PrimaryExpr;
-    e2: Comparison | PrimaryExpr;
+    e1: Expression | PrimaryExpr;
+    e2: Expression | PrimaryExpr;
     op: '!=' | '&&' | '*' | '+' | '-' | '/' | '<' | '<=' | '==' | '>' | '>=' | '||';
 }
 
@@ -280,8 +264,6 @@ export type StatemachineAstType = {
     Attribute: Attribute
     BinExpr: BinExpr
     Command: Command
-    Comparison: Comparison
-    Conditional: Conditional
     Event: Event
     Expression: Expression
     Group: Group
@@ -302,18 +284,13 @@ export type StatemachineAstType = {
 export class StatemachineAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [Action, Assignment, Attribute, BinExpr, Command, Comparison, Conditional, Event, Expression, Group, Literal, NegBoolExpr, NegExpr, NegIntExpr, PrimaryExpr, PrintStatement, PrintValue, Ref, State, Statemachine, StringLiteral, Transition];
+        return [Action, Assignment, Attribute, BinExpr, Command, Event, Expression, Group, Literal, NegBoolExpr, NegExpr, NegIntExpr, PrimaryExpr, PrintStatement, PrintValue, Ref, State, Statemachine, StringLiteral, Transition];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
         switch (subtype) {
-            case BinExpr: {
-                return this.isSubtype(Comparison, supertype) || this.isSubtype(Conditional, supertype);
-            }
-            case Comparison: {
-                return this.isSubtype(Conditional, supertype);
-            }
-            case Conditional: {
+            case BinExpr:
+            case PrimaryExpr: {
                 return this.isSubtype(Expression, supertype);
             }
             case Expression:
@@ -329,9 +306,6 @@ export class StatemachineAstReflection extends AbstractAstReflection {
             case NegBoolExpr:
             case NegIntExpr: {
                 return this.isSubtype(NegExpr, supertype);
-            }
-            case PrimaryExpr: {
-                return this.isSubtype(Comparison, supertype);
             }
             default: {
                 return false;

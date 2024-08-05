@@ -22,10 +22,7 @@ attributes
 initialState Idle
 
 state Idle
-    motionDetected when isMotionDetected => MotionDetected with{
-        print("Motion Detected, turning on lights")
-        run turnOnLights
-    };
+    motionDetected => MotionDetected;
     noMotion => Idle;
     temperatureRise => Heating;
     temperatureDrop => Idle

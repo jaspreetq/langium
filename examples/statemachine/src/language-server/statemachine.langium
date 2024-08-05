@@ -45,10 +45,10 @@ Attribute:
 Expression:
     Conditional;
 
-Conditional:
+Conditional infers Expression:
     Comparison ({infer BinExpr.e1=current} op=('||' | '&&') e2=Comparison)*;
 
-Comparison:
+Comparison infers Expression:
     PrimaryExpr ({infer BinExpr.e1=current} op=('<=' | '<' | '>=' | '>' | '==' | '!=' | '+' | '-' | '*'| '/') e2=PrimaryExpr)*;
 
 PrimaryExpr:

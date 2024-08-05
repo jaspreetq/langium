@@ -667,6 +667,10 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
     {
       "$type": "ParserRule",
       "name": "Conditional",
+      "inferredType": {
+        "$type": "InferredType",
+        "name": "Expression"
+      },
       "definition": {
         "$type": "Group",
         "elements": [
@@ -734,6 +738,10 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
     {
       "$type": "ParserRule",
       "name": "Comparison",
+      "inferredType": {
+        "$type": "InferredType",
+        "name": "Expression"
+      },
       "definition": {
         "$type": "Group",
         "elements": [

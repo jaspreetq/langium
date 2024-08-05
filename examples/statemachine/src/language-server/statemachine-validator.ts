@@ -6,7 +6,7 @@
  ******************************************************************************/
 
 import type { ValidationAcceptor, ValidationChecks } from 'langium';
-import { type State, type Statemachine, type StatemachineAstType, type Event, type Attribute, Assignment, Expression, PrintStatement, isStringLiteral } from './generated/ast.js';
+import { type State, type Statemachine, type StatemachineAstType, type Event, type Attribute, Assignment, Expression, PrintStatement, isStringLiteral, Transition } from './generated/ast.js';
 import type { StatemachineServices } from './statemachine-module.js';
 import { MultiMap } from 'langium';
 import { defaultAttributeValue, evalExpression, inferType } from '../cli/interpret-util.js';
@@ -23,7 +23,9 @@ export function registerValidationChecks(services: StatemachineServices) {
         // Attribute: validator.checkAttribute,
         Assignment: validator.checkAssignment,
         Expression: validator.checkExpression,
-        PrintStatement: validator.checkPrintStatement
+        PrintStatement: validator.checkPrintStatement,
+        Transition: validator.checkTransition,
+
     };
     registry.register(checks, validator);
 }
@@ -122,6 +124,18 @@ export class StatemachineValidator {
                 } catch (error) {
                     accept('error', (error as Error).message, { node: value });
                 }
+            }
+        }
+    }
+
+    checkTransition(transition: Transition, accept: ValidationAcceptor): void {
+        if (transition.guard) {
+            try {
+                if(inferType(transition.guard, env) !== 'bool') {
+                    accept('error', 'Guard condition must be of type bool.', { node: transition.guard });
+                }
+            } catch (error) {
+                accept('error', (error as Error).message, { node: transition.guard });
             }
         }
     }

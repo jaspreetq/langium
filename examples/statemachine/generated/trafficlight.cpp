@@ -33,8 +33,8 @@ private:
     State* state = nullptr;
 public:
     int cnt = (-89 / 12);
-    bool isOut = (true == false);
-    bool isEmpty = (((((12 == cnt) || (cnt > 0))) && (cnt < 100)) || !isOut);
+    bool isEmpty = ((((12 == cnt) || (cnt > 0))) && (cnt < 100));
+    bool isOut = ((true == false) || !isEmpty);
     bool checkDefault = (true == isEmpty);
     TrafficLight(State* initial_state) {
         initial_state->set_context(this);

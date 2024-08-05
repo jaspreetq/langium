@@ -16,19 +16,14 @@ import * as url from 'node:url';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { interpretStatemachine } from './interpreter.js';
-import { eventsAreValid } from './interpret-util.js';
+// import { eventsAreValid } from './interpret-util.js';
 import chalk from 'chalk';
 
-export const interpret = async (fileName: string, eventNames: string[]): Promise<void> => {
+export const interpret = async (fileName: string): Promise<void> => {
     const services = createStatemachineServices(NodeFileSystem).statemachine;
     const model = await extractAstNode<Statemachine>(fileName, StatemachineLanguageMetaData.fileExtensions, services);
     console.log('Interpreting model...', model.$type, typeof model);
-    if (!eventsAreValid(model, eventNames)) {
-        console.error('Invalid events provided. Interpretation aborted.');
-        return;
-    }
-    console.log('Interpreting model...', model.$type, typeof model);
-    interpretStatemachine(model, eventNames);
+    interpretStatemachine(model);
 };
 
 
@@ -76,9 +71,8 @@ program
 program
     .command('interpret')
     .argument('<file>', `possible file extensions: ${StatemachineLanguageMetaData.fileExtensions.join(', ')}`)
-    .argument('<events...>', 'list of events to trigger the statemachine')
     .description('Interpret a statemachine model with a sequence of events')
-    .action((file, events) => interpret(file, events));
+    .action((file) => interpret(file));
 
 program.parse(process.argv);
 
