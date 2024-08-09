@@ -56,6 +56,7 @@ export interface Action extends AstNode {
     assignment?: Assignment;
     command?: Reference<Command>;
     print?: PrintStatement;
+    setTimeout?: SetTimeout;
 }
 
 export const Action = 'Action';
@@ -201,6 +202,18 @@ export function isRef(item: unknown): item is Ref {
     return reflection.isInstance(item, Ref);
 }
 
+export interface SetTimeout extends AstNode {
+    readonly $container: Action;
+    readonly $type: 'SetTimeout';
+    duration: number;
+}
+
+export const SetTimeout = 'SetTimeout';
+
+export function isSetTimeout(item: unknown): item is SetTimeout {
+    return reflection.isInstance(item, SetTimeout);
+}
+
 export interface State extends AstNode {
     readonly $container: Statemachine;
     readonly $type: 'State';
@@ -275,6 +288,7 @@ export type StatemachineAstType = {
     PrintStatement: PrintStatement
     PrintValue: PrintValue
     Ref: Ref
+    SetTimeout: SetTimeout
     State: State
     Statemachine: Statemachine
     StringLiteral: StringLiteral
@@ -284,7 +298,7 @@ export type StatemachineAstType = {
 export class StatemachineAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [Action, Assignment, Attribute, BinExpr, Command, Event, Expression, Group, Literal, NegBoolExpr, NegExpr, NegIntExpr, PrimaryExpr, PrintStatement, PrintValue, Ref, State, Statemachine, StringLiteral, Transition];
+        return [Action, Assignment, Attribute, BinExpr, Command, Event, Expression, Group, Literal, NegBoolExpr, NegExpr, NegIntExpr, PrimaryExpr, PrintStatement, PrintValue, Ref, SetTimeout, State, Statemachine, StringLiteral, Transition];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -344,7 +358,8 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                     properties: [
                         { name: 'assignment' },
                         { name: 'command' },
-                        { name: 'print' }
+                        { name: 'print' },
+                        { name: 'setTimeout' }
                     ]
                 };
             }
@@ -438,6 +453,14 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                     name: Ref,
                     properties: [
                         { name: 'val' }
+                    ]
+                };
+            }
+            case SetTimeout: {
+                return {
+                    name: SetTimeout,
+                    properties: [
+                        { name: 'duration' }
                     ]
                 };
             }

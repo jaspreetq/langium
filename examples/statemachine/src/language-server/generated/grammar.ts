@@ -30,7 +30,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@24"
+                "$ref": "#/rules@25"
               },
               "arguments": []
             }
@@ -95,7 +95,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@10"
+                    "$ref": "#/rules@11"
                   },
                   "arguments": []
                 },
@@ -151,7 +151,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
         "terminal": {
           "$type": "RuleCall",
           "rule": {
-            "$ref": "#/rules@24"
+            "$ref": "#/rules@25"
           },
           "arguments": []
         }
@@ -173,7 +173,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
         "terminal": {
           "$type": "RuleCall",
           "rule": {
-            "$ref": "#/rules@24"
+            "$ref": "#/rules@25"
           },
           "arguments": []
         }
@@ -202,7 +202,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@24"
+                "$ref": "#/rules@25"
               },
               "arguments": []
             }
@@ -282,7 +282,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
               "terminal": {
                 "$type": "RuleCall",
                 "rule": {
-                  "$ref": "#/rules@24"
+                  "$ref": "#/rules@25"
                 },
                 "arguments": []
               },
@@ -303,7 +303,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@11"
+                    "$ref": "#/rules@12"
                   },
                   "arguments": []
                 }
@@ -380,7 +380,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@9"
+                "$ref": "#/rules@10"
               },
               "arguments": []
             }
@@ -392,7 +392,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@6"
+                "$ref": "#/rules@7"
               },
               "arguments": []
             }
@@ -417,6 +417,57 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 }
               }
             ]
+          },
+          {
+            "$type": "Assignment",
+            "feature": "setTimeout",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@6"
+              },
+              "arguments": []
+            }
+          }
+        ]
+      },
+      "definesHiddenTokens": false,
+      "entry": false,
+      "fragment": false,
+      "hiddenTokens": [],
+      "parameters": [],
+      "wildcard": false
+    },
+    {
+      "$type": "ParserRule",
+      "name": "SetTimeout",
+      "definition": {
+        "$type": "Group",
+        "elements": [
+          {
+            "$type": "Keyword",
+            "value": "setTimeout"
+          },
+          {
+            "$type": "Keyword",
+            "value": "("
+          },
+          {
+            "$type": "Assignment",
+            "feature": "duration",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@26"
+              },
+              "arguments": []
+            }
+          },
+          {
+            "$type": "Keyword",
+            "value": ")"
           }
         ]
       },
@@ -448,7 +499,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@7"
+                "$ref": "#/rules@8"
               },
               "arguments": []
             }
@@ -467,7 +518,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@7"
+                    "$ref": "#/rules@8"
                   },
                   "arguments": []
                 }
@@ -497,14 +548,14 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@8"
+              "$ref": "#/rules@9"
             },
             "arguments": []
           },
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@11"
+              "$ref": "#/rules@12"
             },
             "arguments": []
           }
@@ -527,7 +578,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
         "terminal": {
           "$type": "RuleCall",
           "rule": {
-            "$ref": "#/rules@26"
+            "$ref": "#/rules@27"
           },
           "arguments": []
         }
@@ -552,7 +603,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "CrossReference",
               "type": {
-                "$ref": "#/rules@10"
+                "$ref": "#/rules@11"
               },
               "deprecatedSyntax": false
             }
@@ -568,7 +619,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@11"
+                "$ref": "#/rules@12"
               },
               "arguments": []
             }
@@ -595,7 +646,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@24"
+                "$ref": "#/rules@25"
               },
               "arguments": []
             }
@@ -611,7 +662,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@22"
+                "$ref": "#/rules@23"
               },
               "arguments": []
             }
@@ -630,7 +681,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@11"
+                    "$ref": "#/rules@12"
                   },
                   "arguments": []
                 }
@@ -653,7 +704,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
       "definition": {
         "$type": "RuleCall",
         "rule": {
-          "$ref": "#/rules@12"
+          "$ref": "#/rules@13"
         },
         "arguments": []
       },
@@ -677,7 +728,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@13"
+              "$ref": "#/rules@14"
             },
             "arguments": []
           },
@@ -718,7 +769,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@13"
+                    "$ref": "#/rules@14"
                   },
                   "arguments": []
                 }
@@ -748,7 +799,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@14"
+              "$ref": "#/rules@15"
             },
             "arguments": []
           },
@@ -821,7 +872,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@14"
+                    "$ref": "#/rules@15"
                   },
                   "arguments": []
                 }
@@ -847,13 +898,6 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@15"
-            },
-            "arguments": []
-          },
-          {
-            "$type": "RuleCall",
-            "rule": {
               "$ref": "#/rules@16"
             },
             "arguments": []
@@ -869,6 +913,13 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "$type": "RuleCall",
             "rule": {
               "$ref": "#/rules@18"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@19"
             },
             "arguments": []
           }
@@ -894,7 +945,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@25"
+                "$ref": "#/rules@26"
               },
               "arguments": []
             }
@@ -906,7 +957,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@23"
+                "$ref": "#/rules@24"
               },
               "arguments": []
             }
@@ -930,12 +981,12 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
         "terminal": {
           "$type": "CrossReference",
           "type": {
-            "$ref": "#/rules@10"
+            "$ref": "#/rules@11"
           },
           "terminal": {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@24"
+              "$ref": "#/rules@25"
             },
             "arguments": []
           },
@@ -966,7 +1017,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@11"
+                "$ref": "#/rules@12"
               },
               "arguments": []
             }
@@ -993,14 +1044,14 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@19"
+              "$ref": "#/rules@20"
             },
             "arguments": []
           },
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@20"
+              "$ref": "#/rules@21"
             },
             "arguments": []
           }
@@ -1030,7 +1081,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@11"
+                "$ref": "#/rules@12"
               },
               "arguments": []
             }
@@ -1061,7 +1112,7 @@ export const StatemachineGrammar = (): Grammar => loadedStatemachineGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@11"
+                "$ref": "#/rules@12"
               },
               "arguments": []
             }

@@ -58,7 +58,8 @@ export function generateCppContent(ctx: GeneratorContext): Generated {
         #include <iostream>
         #include <map>
         #include <string>
-
+        #include <chrono>
+        #include <thread>
         class ${ctx.statemachine.name};
 
         ${generateStateClass(ctx)}
@@ -177,7 +178,12 @@ function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv
 
 
 function generateAction(action: Action, env: StatemachineEnv): string {
-    if (action.assignment) {
+    if (action.setTimeout) {
+        return `
+            std::cout << "Delaying transition for ${action.setTimeout.duration} milliseconds..." << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(${action.setTimeout.duration}));
+        `;
+    } else if (action.assignment) {
         const variableName = action.assignment.variable.ref?.name;
         const value = convertBoolExprToString(action.assignment.value, env, 'statemachine->');
         return `            statemachine->${variableName} = ${value};`;
@@ -202,7 +208,8 @@ function generateTransition(transition: Transition, stateName: string, env: Stat
     }
 
     const guardCondition = transition.guard != undefined ? convertBoolExprToString(transition.guard, env, 'statemachine->') : "true";
-    const actionsCode = transition.actions.map(action => `${generateAction(action, env)}`).join('\n');
+    const actionsCode = transition.actions.map(action => `${generateAction(action, env)}`).filter(actionCode => actionCode.length > 0)
+        .join('\n');
 
     return `
     void ${stateName}::${transition.event.$refText}() {

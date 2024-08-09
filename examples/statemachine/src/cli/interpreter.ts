@@ -1,3 +1,4 @@
+import { setTimeout as delay } from 'timers/promises';  // Node.js timers/promises API
 import * as readline from 'node:readline/promises';
 import chalk from 'chalk';
 import { Attribute, Command, Event, State, Transition, Action, Statemachine, isStringLiteral } from './../language-server/generated/ast.js';
@@ -19,8 +20,12 @@ interface ExecutionContext {
 }
 
 
-function executeAction(action: Action, context: ExecutionContext): void {
-    if (action.assignment) {
+async function executeAction(action: Action, context: ExecutionContext): Promise<void> {
+    if (action.setTimeout) {
+        const duration = action.setTimeout.duration;
+        console.log(`Delaying transition for ${duration} milliseconds...`);
+        await delay(duration);
+    } else if (action.assignment) {
         const variableName = action.assignment.variable.ref?.name;
         if (variableName) {
             const value = evalExpression(action.assignment.value, context.env);
@@ -40,29 +45,32 @@ function executeAction(action: Action, context: ExecutionContext): void {
     }
 }
 
-function executeTransition(transition: Transition, context: ExecutionContext): void {
+
+async function executeTransition(transition: Transition, context: ExecutionContext): Promise<void> {
     const guardExpression = (transition.guard && evalExpression(transition.guard, context.env)) ?? true;
     if (transition.guard && typeof guardExpression !== 'boolean') {
         throw new Error(`Guard expression must evaluate to a boolean value. Got ${guardExpression} instead.`);
-    }
-    if (transition.guard && !guardExpression) {
+    } else if (transition.guard && !guardExpression) {
         console.log(chalk.yellow(`Transition failed from ${context.currentState?.name} to ${transition.state?.ref?.name} due to guard condition evaluating to false.`));
         return;
     }
+
     const oldState = context.currentState?.name;
-    transition.actions.forEach(action => executeAction(action, context));
+    for (const action of transition.actions) {
+        await executeAction(action, context);  // Await each action, including delays
+    }
     context.currentState = transition.state.ref;
     console.log(chalk.green(`${oldState} ==> ${context.currentState?.name}`));
 }
 
-function handleEvents(context: ExecutionContext): void {
+async function handleEvents(context: ExecutionContext): Promise<void> {
     while (context.events.length > 0 && context.currentState) {
         console.log(chalk.green(`Current State: ${context.currentState.name}`));
         const event = context.events.shift();
         if (event) {
             for (const transition of context.currentState.transitions) {
                 if (transition.event.ref?.name === event.name) {
-                    executeTransition(transition, context);
+                    await executeTransition(transition, context);
                     break;
                 }
             }
@@ -139,13 +147,21 @@ export async function interpretStatemachine(model: Statemachine): Promise<void> 
     });
 
     console.log(chalk.green(`Starting state: [${context.currentState.name}]`));
+    let processingEvent = false;
 
-    rl.on('line', (input) => {
+    rl.on('line', async (input) => {
+        if (processingEvent) {
+            console.log(chalk.yellow(`Input ignored: Currently processing a transition...`));
+            return;  // Ignore input while processing an event
+        }
+
         const event = interpretedModel.events.find(e => e.name === input.trim());
         if (event) {
+            processingEvent = true;  // Block further input
             context.events.push(event);
-            handleEvents(context);
+            await handleEvents(context);  // Await to handle async actions like setTimeout
             console.log(chalk.green(`Current State: [${context.currentState?.name}]`));
+            processingEvent = false;  // Unblock input
         } else {
             console.error(`Event ${input} not found in the model.`);
         }

@@ -93,6 +93,23 @@ export class StatemachineValidator {
                     accept('error', ` In Attribute initialization: ${(error as Error).message}`, { node: attribute, property: 'defaultValue' });
                 }
             }
+
+        //check for repetetive events in a state i.e. multiple transitions with the same event
+        for (const state of statemachine.states) {
+            const eventMap = new MultiMap<string, Transition>();
+            for (const transition of state.transitions) {
+                if (transition.event.ref) {
+                    eventMap.add(transition.event.ref?.name, transition);
+                }
+            }
+            for (const [eventName, transitions] of eventMap.entriesGroupedByKey()) {
+                if (transitions.length > 1) {
+                    for (const transition of transitions) {
+                        accept('error', `Multiple transitions with the same event: ${eventName} in state ${state.name}`, { node: transition, property: 'event' });
+                    }
+                }
+            }
+        }
         }
         
     checkAssignment(assignment: Assignment, accept: ValidationAcceptor): void {

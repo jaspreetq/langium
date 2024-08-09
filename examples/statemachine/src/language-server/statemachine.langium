@@ -24,7 +24,10 @@ Transition:
     event=[Event:ID] ('when' guard=Expression)? '=>' state=[State] ('with{' actions+=Action+'}')? ';' ;
 
 Action:
-    assignment=Assignment | print=PrintStatement | ('run' command=[Command]);
+    assignment=Assignment | print=PrintStatement | ('run' command=[Command]) | setTimeout=SetTimeout;
+
+SetTimeout:
+    'setTimeout' '(' duration=NUMBER ')';
 
 PrintStatement:     
     'print' '(' values+=PrintValue (',' values+=PrintValue)* ')';
@@ -59,7 +62,6 @@ Literal:
 
 Ref:
     val=[Attribute:ID];
-
 Group:
     '(' ge=Expression ')';
 

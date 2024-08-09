@@ -1,7 +1,8 @@
 #include <iostream>
 #include <map>
 #include <string>
-
+#include <chrono>
+#include <thread>
 class TrafficLight;
 
 class State {
@@ -91,6 +92,10 @@ public:
 
     void PowerOff::switchCapacity() {
         if (true) {
+
+            std::cout << "Delaying transition for 6000 milliseconds..." << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(6000));
+        
             std::cout << "Run Command: testCommand()" << std::endl;
             std::cout << statemachine->cnt << "Value of Cnt is :" << statemachine->cnt << " A random Expression with refs in it:" << (statemachine->isEmpty && ((23 < ((((statemachine->cnt + statemachine->cnt) / (((statemachine->cnt - statemachine->cnt) + 1))) + 1))))) << ((statemachine->cnt * 23) - 24) << std::endl;
             std::cout << statemachine->isOut << std::endl;
