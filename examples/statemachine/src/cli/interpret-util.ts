@@ -2,8 +2,11 @@ import { Attribute, Statemachine } from "../language-server/generated/ast.js";
 import { Expression, isNegExpr, isLiteral, isNegIntExpr, isNegBoolExpr, isGroup, isRef, isBinExpr } from "../language-server/generated/ast.js";
 import { attributeNames, StatemachineEnv } from '../cli/interpreter.js';
 import chalk from "chalk";
+// export function getErrorMessage(e: Error): string {
 
-export function defaultAttributeValue(attribute: Attribute): number | boolean {
+// }
+export const ERROR_MESSAGE_GUARD_NOT_BOOL = 'Guard must be a boolean expression';
+export function getDefaultAttributeValue(attribute: Attribute): number | boolean {
     return attribute.type == 'bool' ? false : 0;
 }
 

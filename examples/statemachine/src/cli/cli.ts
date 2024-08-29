@@ -15,7 +15,7 @@ import { generateCpp } from './generator.js';
 import * as url from 'node:url';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { interpretStatemachine } from './interpreter.js';
+import { interpretStatemachine, interpretStatemachineStatic } from './interpreter.js';
 // import { eventsAreValid } from './interpret-util.js';
 import chalk from 'chalk';
 
@@ -26,6 +26,12 @@ export const interpret = async (fileName: string): Promise<void> => {
     interpretStatemachine(model);
 };
 
+export const interpretStatic = async (fileName: string, events: string[]): Promise<void> => {
+    const services = createStatemachineServices(NodeFileSystem).statemachine;
+    const model = await extractAstNode<Statemachine>(fileName, StatemachineLanguageMetaData.fileExtensions, services);
+    console.log('Interpreting model statically...', model.$type, typeof model);
+    await interpretStatemachineStatic(model, events);
+};
 
 export const generateAction = async (fileName: string, opts: GenerateOptions): Promise<void> => {
     const services = createStatemachineServices(NodeFileSystem).statemachine;
@@ -73,6 +79,13 @@ program
     .argument('<file>', `possible file extensions: ${StatemachineLanguageMetaData.fileExtensions.join(', ')}`)
     .description('Interpret a statemachine model with a sequence of events')
     .action((file) => interpret(file));
+
+program
+    .command('interpret-static')
+    .argument('<file>', `possible file extensions: ${StatemachineLanguageMetaData.fileExtensions.join(', ')}`)
+    .argument('<events...>', 'sequence of events to interpret')
+    .description('Interpret a statemachine model with a static sequence of events')
+    .action((file, events) => interpretStatic(file, events));
 
 program.parse(process.argv);
 

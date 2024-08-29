@@ -1,48 +1,66 @@
 statemachine TrafficLight
 
-events 
-    switchCapacity
+events
     next
-commands
-    printExt
-    testCommand
+    switchMode
 
 attributes
-    cnt : int = -89/12
-    isEmpty : bool = (12 == cnt || cnt > 0) && cnt < 100
-    isOut : bool = true == false || !isEmpty
-    checkDefault: bool = true == isEmpty
-    
-initialState PowerOff
+    timeElapsedInSec : int = 0
+    isNightMode : bool = false
 
-state PowerOff
-    switchCapacity when true => RedLight
-    with{
-        setTimeout(6000)
-        run testCommand
-        print(cnt,"Value of Cnt is :", cnt, " A random Expression with refs in it:", isEmpty && (23 < (cnt + cnt/(cnt - cnt +1) + 1)), cnt * 23 - 24)
-        print(isOut)
-    };
-end
+initialState RedLight
 
 state RedLight
-    switchCapacity when (12+32*30 > cnt) => PowerOff 
+    switchMode => NightMode
     with{
-        run testCommand
-        print(cnt > 10)
-        cnt = cnt + 1 + 20*(cnt+1)
-        print(cnt)
-        print( cnt + cnt/(cnt - cnt +1) + 1)
+        isNightMode = true
+        print("Switching to night mode.")
     };
-    next => GreenLight;
-end 
-
-state YellowLight
-    switchCapacity => PowerOff ;
-    next => RedLight ;
+    
+    next => YellowLight
+    with{
+        // timeElapsedInSec = 0
+        setTimeout(6000)
+        timeElapsedInSec = 6
+        print("Switching to Yellow Light after ", timeElapsedInSec, " seconds of Red Light.")
+    };
 end
 
 state GreenLight
-    switchCapacity => PowerOff ;
-    next => YellowLight ;
+    next when (timeElapsedInSec >= 5) => RedLight
+    with{
+        setTimeout(6000)
+        timeElapsedInSec = 6
+        print("Switching to Red Light after ", timeElapsedInSec, " seconds of Green Light.")
+    };
+    
+    switchMode => NightMode
+    with{
+        isNightMode = true
+        print("Switching to night mode.")
+    };
+end
+
+state YellowLight
+    next when (timeElapsedInSec >= 5) => GreenLight
+    with{
+        setTimeout(3000)
+        timeElapsedInSec = timeElapsedInSec + 3
+        print("Switching to Green Light after 3 seconds of Yellow Light.")
+    };
+    
+    switchMode => NightMode
+    with{
+        isNightMode = true
+        print("Switching to night mode.")
+    };
+end
+
+state NightMode
+    next => RedLight
+    with{
+        timeElapsedInSec = 0
+        isNightMode = false
+        print("Exiting night mode. Switching to Red Light.")
+    };
 end

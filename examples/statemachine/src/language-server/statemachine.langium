@@ -16,12 +16,20 @@ Command:
 
 State:
     'state' name=ID
-        ('actions' '{' actions+=Action+ '}')?
+        // ('actions' '{' actions+=Action+ '}')?
         transitions+=Transition*
     'end';
 
 Transition:
-    event=[Event:ID] ('when' guard=Expression)? '=>' state=[State] ('with{' actions+=Action+'}')? ';' ;
+    event=[Event:ID] 
+    ('when' guard=Expression)? '=>' state=[State] 
+    ('with{'
+         actions+=Action+
+        //  (InTransitionEventCall)'()'?
+    '}')? ';' ;
+
+// InTransitionEventCall:
+//     event=[Event:ID];
 
 Action:
     assignment=Assignment | print=PrintStatement | ('run' command=[Command]) | setTimeout=SetTimeout;

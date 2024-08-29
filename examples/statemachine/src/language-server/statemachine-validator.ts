@@ -9,7 +9,7 @@ import type { ValidationAcceptor, ValidationChecks } from 'langium';
 import { type State, type Statemachine, type StatemachineAstType, type Event, type Attribute, Assignment, Expression, PrintStatement, isStringLiteral, Transition } from './generated/ast.js';
 import type { StatemachineServices } from './statemachine-module.js';
 import { MultiMap } from 'langium';
-import { defaultAttributeValue, evalExpression, inferType } from '../cli/interpret-util.js';
+import { getDefaultAttributeValue, evalExpression, inferType } from '../cli/interpret-util.js';
 import { attributeNames, env } from '../cli/interpreter.js';
 
 // let previousAttributes = new MultiMap<string, Attribute>();
@@ -54,8 +54,12 @@ export class StatemachineValidator {
         const names = new MultiMap<string, State | Event | Attribute>();
         const allSymbols = [...statemachine.states, ...statemachine.events, ...statemachine.attributes];
         const attributes = [...statemachine.attributes];
+        const initialStateName = statemachine.init?.ref?.name;
         // const currentAttributes = new MultiMap<string, Attribute>(); 
-        
+        const initialStateExists = statemachine.states.some(state => state.name === initialStateName);
+        if (!initialStateExists) {
+            accept('error', 'Initial state must be a state in the statemachine.', { node: statemachine, property: 'init' });
+        }
         // Add all symbols to the MultiMap
         for (const symbol of allSymbols) {
             if (symbol.name) {
@@ -86,7 +90,7 @@ export class StatemachineValidator {
                     if (inferredType !== attribute.type) {
                         accept('error', `Type mismatch: ${attribute.name} is of type ${attribute.type}, ${attribute.defaultValue?.$cstNode}, ${attribute.defaultValue?.$cstNode} but assigned value is of type ${inferredType}.`, { node: attribute, property: 'defaultValue' });
                     }
-                    const value = evalExpression(attribute.defaultValue, env) ?? defaultAttributeValue(attribute);
+                    const value = evalExpression(attribute.defaultValue, env) ?? getDefaultAttributeValue(attribute);
                     env.set(attribute.name,value);
                     // console.log('Attribute name:', attribute.name, 'Attribute value:', value);
                 } catch (error) {
@@ -95,21 +99,21 @@ export class StatemachineValidator {
             }
 
         //check for repetetive events in a state i.e. multiple transitions with the same event
-        for (const state of statemachine.states) {
-            const eventMap = new MultiMap<string, Transition>();
-            for (const transition of state.transitions) {
-                if (transition.event.ref) {
-                    eventMap.add(transition.event.ref?.name, transition);
-                }
-            }
-            for (const [eventName, transitions] of eventMap.entriesGroupedByKey()) {
-                if (transitions.length > 1) {
-                    for (const transition of transitions) {
-                        accept('error', `Multiple transitions with the same event: ${eventName} in state ${state.name}`, { node: transition, property: 'event' });
-                    }
-                }
-            }
-        }
+        // for (const state of statemachine.states) {
+        //     const eventMap = new MultiMap<string, Transition>();
+        //     for (const transition of state.transitions) {
+        //         if (transition.event.ref) {
+        //             eventMap.add(transition.event.ref?.name, transition);
+        //         }
+        //     }
+        //     for (const [eventName, transitions] of eventMap.entriesGroupedByKey()) {
+        //         if (transitions.length > 1) {
+        //             for (const transition of transitions) {
+        //                 accept('error', `Multiple transitions with the same event: ${eventName} in state ${state.name}`, { node: transition, property: 'event' });
+        //             }
+        //         }
+        //     }
+        // }
         }
         
     checkAssignment(assignment: Assignment, accept: ValidationAcceptor): void {
@@ -156,6 +160,24 @@ export class StatemachineValidator {
             }
         }
     }
+    // checkAttribute(attribute: Attribute, accept: ValidationAcceptor): void {
+    //     // const model = await extractAstNode<Statemachine>(fileName, StatemachineLanguageMetaData.fileExtensions, services);
+    //     // const currentAttributes = new MultiMap<string, Attribute>(); 
+        
+    //     if (attribute.defaultValue) {
+    //         try {
+    //             const inferredType = inferType(attribute.defaultValue, env, attribute.name); // Adjust env as needed
+    //             if (inferredType !== attribute.type) {
+    //                 accept('error', `Type mismatch: ${attribute.name} is of type ${attribute.type}, ${attribute.defaultValue?.$cstNode}, ${attribute.defaultValue?.$cstNode} but assigned value is of type ${inferredType}.`, { node: attribute, property: 'defaultValue' });
+    //             }
+    //             const value = evalExpression(attribute.defaultValue, env) ?? getDefaultAttributeValue(attribute);
+    //             env.set(attribute.name,value);
+    //             // console.log('Attribute name:', attribute.name, 'Attribute value:', value);
+    //         } catch (error) {
+    //             accept('error', ` In Attribute initialization: ${(error as Error).message}`, { node: attribute, property: 'defaultValue' });
+    //         }
+    //     }
+    // }
 }
 
 // // Add only attributes to the currentAttributes MultiMap
@@ -194,24 +216,7 @@ export class StatemachineValidator {
         
     // }
 
-    // checkAttribute(attribute: Attribute, accept: ValidationAcceptor): void {
-    //     // const model = await extractAstNode<Statemachine>(fileName, StatemachineLanguageMetaData.fileExtensions, services);
-    //     // const currentAttributes = new MultiMap<string, Attribute>(); 
-        
-    //     if (attribute.defaultValue) {
-    //         try {
-    //             const inferredType = inferType(attribute.defaultValue, env, attribute.name); // Adjust env as needed
-    //             if (inferredType !== attribute.type) {
-    //                 accept('error', `Type mismatch: ${attribute.name} is of type ${attribute.type}, ${attribute.defaultValue?.$cstNode}, ${attribute.defaultValue?.$cstNode} but assigned value is of type ${inferredType}.`, { node: attribute, property: 'defaultValue' });
-    //             }
-    //             const value = evalExpression(attribute.defaultValue, env) ?? defaultAttributeValue(attribute);
-    //             env.set(attribute.name,value);
-    //             // console.log('Attribute name:', attribute.name, 'Attribute value:', value);
-    //         } catch (error) {
-    //             accept('error', ` In Attribute initialization: ${(error as Error).message}`, { node: attribute, property: 'defaultValue' });
-    //         }
-    //     }
-    // }
+ 
 
 
     // checkAttribute(attribute: Attribute, accept: ValidationAcceptor): void {

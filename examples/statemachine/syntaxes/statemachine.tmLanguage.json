@@ -10,7 +10,7 @@
     },
     {
       "name": "keyword.control.statemachine",
-      "match": "\\b(actions|attributes|commands|end|events|initialState|print|run|setTimeout|state|statemachine|when)\\b|\\b(with\\{)\\B"
+      "match": "\\b(attributes|commands|end|events|initialState|print|run|setTimeout|state|statemachine|when)\\b|\\b(with\\{)\\B"
     },
     {
       "name": "string.quoted.double.statemachine",

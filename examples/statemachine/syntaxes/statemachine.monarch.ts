@@ -1,12 +1,12 @@
 // Monarch syntax highlighting for the statemachine language.
 export default {
     keywords: [
-        'actions','attributes','commands','end','events','initialState','print','run','setTimeout','state','statemachine','when','with{'
+        'attributes','commands','end','events','initialState','print','run','setTimeout','state','statemachine','when','with{'
     ],
     operators: [
         '!','!=','&&','*','+',',','-','/',':',';','<','<=','=','==','=>','>','>=','||'
     ],
-    symbols: /!|!=|&&|\(|\)|\*|\+|,|-|\/|:|;|<|<=|=|==|=>|>|>=|\{|\|\||\}/,
+    symbols: /!|!=|&&|\(|\)|\*|\+|,|-|\/|:|;|<|<=|=|==|=>|>|>=|\|\||\}/,
 
     tokenizer: {
         initial: [

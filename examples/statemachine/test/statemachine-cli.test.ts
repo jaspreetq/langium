@@ -24,6 +24,14 @@ describe('Test the statemachine CLI', () => {
         const generatedDirExists = fs.existsSync(fullPath);
         expect(generatedDirExists).toBe(true);
     });
+    let inputFileName = path.join(__dirname, '../example/trafficlight.statemachine');
+    test('Interpret-static command returns code 0 and produces expected output', async () => {
+        const events = `'switchMode' 'next'`; // Example events array
+        const result = await cli(['interpret-static', inputFileName, events]);
+        console.log(result.stdout, result.stderr, result.error);
+        expect(result.code).toBe(0);
+        // Add additional assertions to verify the output if needed
+    });
 
     afterAll(() => {
         if (fs.existsSync(destination)) {

@@ -51,7 +51,7 @@ export function isPrintValue(item: unknown): item is PrintValue {
 }
 
 export interface Action extends AstNode {
-    readonly $container: State | Transition;
+    readonly $container: Transition;
     readonly $type: 'Action';
     assignment?: Assignment;
     command?: Reference<Command>;
@@ -217,7 +217,6 @@ export function isSetTimeout(item: unknown): item is SetTimeout {
 export interface State extends AstNode {
     readonly $container: Statemachine;
     readonly $type: 'State';
-    actions: Array<Action>;
     name: string;
     transitions: Array<Transition>;
 }
@@ -468,7 +467,6 @@ export class StatemachineAstReflection extends AbstractAstReflection {
                 return {
                     name: State,
                     properties: [
-                        { name: 'actions', defaultValue: [] },
                         { name: 'name' },
                         { name: 'transitions', defaultValue: [] }
                     ]

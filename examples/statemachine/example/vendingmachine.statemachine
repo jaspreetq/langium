@@ -1,0 +1,79 @@
+statemachine VendingMachine
+
+events
+    insertCoin
+    selectItem
+    dispenseItem
+    cancel
+
+commands
+    notifyUser
+    playSound
+
+attributes
+    balance : int = 0
+    itemSelected : bool = false || balance < 0
+    itemPrice : int = 50
+    stock : int = 10
+
+initialState Idle
+
+state Idle
+    insertCoin => AwaitingSelection 
+    with{
+        print("Please insert a coin")
+    };
+end
+
+state AwaitingSelection
+    insertCoin when (balance < itemPrice) => AwaitingSelection
+    with{
+        balance = balance + 10
+        print("Balance updated: ", balance)
+        setTimeout(1000)
+        run notifyUser
+    };
+
+    selectItem when (balance >= itemPrice) => ProcessingSelection
+    with{
+        itemSelected = true
+        print("Item selected.")
+    };
+
+    cancel => Idle
+    with{
+        print("Transaction cancelled.")
+        balance = 0
+        itemSelected = false
+    };
+end
+
+state ProcessingSelection
+    dispenseItem when (itemSelected && stock > 0) => Dispensing
+    with{
+        print("Dispensing item...")
+        setTimeout(2000)
+    };
+
+    cancel => Idle
+    with{
+        print("Transaction cancelled.")
+        balance = 0
+        itemSelected = false
+    };
+end
+
+state Dispensing
+    insertCoin => Idle
+    with{
+        balance = balance - itemPrice
+        print("Item dispensed. Balance: ", balance)
+        stock = stock - 1
+        run playSound
+    };
+
+    dispenseItem => Idle
+    with{
+        print("Insufficient stock.")
+    };
+end

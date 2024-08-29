@@ -1,65 +1,183 @@
-statemachine HomeAutomation
+// statemachine HomeAutomation
 
-events 
-    motionDetected
-    noMotion
-    lightOn
-    lightOff
-    temperatureRise
-    temperatureDrop
-commands
-    turnOnLights
-    turnOffLights
-    startHeating
-    stopHeating
+// events 
+//     motionDetected
+//     noMotion
+//     lightOn
+//     lightOff
+//     temperatureRise
+//     temperatureDrop
+// commands
+//     turnOnLights
+//     turnOffLights
+//     startHeating
+//     stopHeating
 
-attributes
-    isMotionDetected : bool = false
-    isLightOn : bool = false
-    currentTemperature : int = 22
-    targetTemperature : int = 24
+// attributes
+//     isMotionDetected : bool = false
+//     isLightOn : bool = false
+//     currentTemperature : int = 22
+//     targetTemperature : int = 24
 
-initialState Idle
+// initialState Idle
 
-state Idle
-    motionDetected => MotionDetected;
-    noMotion => Idle;
-    temperatureRise => Heating;
-    temperatureDrop => Idle
-    with{
-        print("System is Idle, Motion: ", isMotionDetected)
-    };
-end
+// state Idle
+//     motionDetected => MotionDetected;
+//     noMotion => Idle;
+//     temperatureRise => Heating;
+//     temperatureDrop => Idle
+//     with{
+//         print("System is Idle, Motion: ", isMotionDetected)
+//     };
+// end
 
-state MotionDetected
-    motionDetected when isMotionDetected => Idle;
-    lightOn => LightOn
-    with{
-        print("Lights are ON, Motion: ", isMotionDetected)
-    };
-    lightOff => Idle;
-    temperatureRise => Heating;
-    temperatureDrop => Idle
-    with{
-        print("Motion Detected, turning on lights")
-        run turnOnLights
-    };
-end
+// state MotionDetected
+//     motionDetected when isMotionDetected => Idle;
+//     lightOn => LightOn
+//     with{
+//         print("Lights are ON, Motion: ", isMotionDetected)
+//     };
+//     lightOff => Idle;
+//     temperatureRise => Heating;
+//     temperatureDrop => Idle
+//     with{
+//         print("Motion Detected, turning on lights")
+//         run turnOnLights
+//     };
+// end
 
-state LightOn
-    noMotion => Idle;
-    lightOff => Idle;
-    temperatureRise => Heating;
-    temperatureDrop => Idle;
-end
+// state LightOn
+//     noMotion => Idle;
+//     lightOff => Idle;
+//     temperatureRise => Heating;
+//     temperatureDrop => Idle;
+// end
 
-state Heating
-    temperatureDrop when currentTemperature < targetTemperature => Idle;
-    temperatureRise => Heating;
-    lightOn => LightOn;
-    lightOff => Idle
-    with{
-        print("Heating the home, Current Temperature: ", currentTemperature)
-        run startHeating
-    };
-end
+// state Heating
+//     temperatureDrop when currentTemperature < targetTemperature => Idle;
+//     temperatureRise => Heating;
+//     lightOn => LightOn;
+//     lightOff => Idle
+//     with{
+//         print("Heating the home, Current Temperature: ", currentTemperature)
+//         run startHeating
+//     };
+// end
+
+// statemachine TrafficLight
+
+// events 
+//     switchCapacity
+//     next
+// commands
+//     printExt
+//     testCommand
+
+// attributes
+//     cnt : int = -89/12
+//     a: int = 34
+//     isEmpty : bool = (12 == cnt || cnt > 0) && cnt < 100
+//     isOut : bool = true == false || !isEmpty
+//     checkDefault: bool = true == isEmpty
+    
+// initialState PowerOff
+
+// state PowerOff
+//     switchCapacity when true => PowerOff
+//     with{
+//         setTimeout(6000)
+//         run testCommand
+//         print(cnt,"Value of Cnt is :", cnt, " A random Expression with refs in it:", isEmpty && (23 < (cnt + cnt/(cnt - cnt +1) + 1)), cnt * 23 - 24)
+//         print(isOut)
+//     };
+// end
+
+// state RedLight
+//     switchCapacity when (12+32*30 > cnt) => PowerOff 
+//     with{
+//         run testCommand
+//         print(cnt > 10)
+//         cnt = cnt + 1 + 20*(cnt+1)
+//         print(cnt)
+//         print( cnt + cnt/(cnt - cnt +1) + 1)
+//     };
+//     next => GreenLight;
+// end 
+
+// state YellowLight
+//     switchCapacity => PowerOff ;
+//     next => RedLight ;
+// end
+
+// state GreenLight
+//     switchCapacity => PowerOff ;
+//     next => YellowLight ;
+// end
+
+// statemachine TestMachine
+//         events
+//             start
+//         attributes
+//             count: int = "zero"
+//         initialState Idle
+//         state Idle
+//             start => Running;
+//         end
+//         state Running end
+
+// statemachine ComplexLogicSwitch
+//                 events
+//                     toggle
+//                     reset
+//                 attributes
+//                     count: int = 0
+//                     isOn: bool = false
+//                     isActive: bool = true
+//                 initialState Off
+//                 state Off
+//                     toggle => On with{
+//                         isOn = true
+//                         count = count + 1
+//                         isActive = isOn && (count > 0)
+//                     };
+//                 end
+//                 state On
+//                     toggle => Off with{
+//                         isOn = false
+//                         count = count * 2
+//                         isActive = isOn || (count < 5)
+//                     };
+//                     reset => Off with{
+//                         isOn = false
+//                         count = 0
+//                         isActive = false
+//                     };
+//                 end
+
+
+statemachine GuardedSwitch
+                events
+                    toggle
+                    reset
+                attributes
+                    count: int = 0
+                    isOn: bool = false
+                    isActive: bool = true
+                initialState Off
+                state Off
+                    toggle when(count < 3) => On with{
+                        isOn = true
+                        count = count + 1
+                    };
+                end
+                state On
+                    toggle => Off with{
+                        isOn = false
+                        count = count * 2
+                    };
+                    reset => Off with{
+                        isOn = false
+                        count = 0
+                        isActive = false
+                    };
+                end
