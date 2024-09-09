@@ -7,44 +7,6 @@ const services = createStatemachineServices(NodeFileSystem);
 const parse = parseHelper(services.statemachine);
 
 describe('Statemachine Validator Tests', () => {
-    test('Valid statemachine passes without errors', async () => {
-        const input = `
-        statemachine TestMachine
-        events
-            start stop
-        attributes
-            count: int = 0
-            isRunning: bool = false
-        initialState Idle
-        state Idle
-            start => Running;
-        end
-        state Running
-            stop => Idle;
-        end
-        `;
-        const model = await parse(input, { validation: true });
-        console.log(model.diagnostics);
-        expect(model.diagnostics).toHaveLength(0);  // Expect no validation errors
-    });
-
-    test('Invalid statemachine with type error', async () => {
-        const input = `
-        statemachine TestMachine
-        events
-            start
-        attributes
-            count: int = "zero"
-        initialState Idle
-        state Idle
-            start => Running;
-        end
-        state Running end
-        `;
-        const model = await parse(input, { validation: true });
-        expect(model.diagnostics?.length).toBeGreaterThanOrEqual(1);  // Expecting one validation error for type mismatch
-    });
-
     test('Valid statemachine with multiple states', async () => {
         const input = `
         statemachine ComplexMachine
@@ -70,28 +32,47 @@ describe('Statemachine Validator Tests', () => {
         expect(model.diagnostics).toHaveLength(0);  // Expect no validation errors
     });
 
-    test('Invalid statemachine with missing initial state', async () => {
+    test('Valid SM with Logical and Relational Expressions Used during Attribute Initialization ', async () => {
         const input = `
-        statemachine MissingInitialState
+            statemachine TestMachine
+            events
+                start stop
+            attributes
+                count: int = 0
+                isRunning: bool = count < 0 || count > 0
+            initialState Idle
+            state Idle
+                start => Running;
+            end
+            state Running
+                stop => Idle;
+            end
+            `;
+        const model = await parse(input, { validation: true });
+        console.log(model.diagnostics);
+        expect(model.diagnostics).toHaveLength(0);  // Expect no validation errors
+    });
+
+    test('Invalid statemachine with type mismatch in the attribute definition', async () => {
+        const input = `
+        statemachine TypeMismatchAttribute
         events
-            start stop
+            start
         attributes
-            count: int = 0
-            isRunning: bool = false
+            count: int = "zero"
+        initialState Idle
         state Idle
             start => Running;
         end
-        state Running
-            stop => Idle;
-        end
+        state Running end
         `;
         const model = await parse(input, { validation: true });
-        expect(model.diagnostics?.length).toBeGreaterThanOrEqual(1);  // Expecting validation error for missing initial state
+        expect(model.diagnostics).toHaveLength(2);  // Expecting one validation error for type mismatch
     });
 
-    test('Invalid statemachine with undefined event', async () => {
+    test('Invalid statemachine with a type mismatch in a conditional expression (guard)', async () => {
         const input = `
-        statemachine UndefinedEvent
+        statemachine TypeMismatchExpression
         events
             start stop
         attributes
@@ -99,13 +80,63 @@ describe('Statemachine Validator Tests', () => {
             isRunning: bool = false
         initialState Idle
         state Idle
-            start => Running;
+            start when count + 2 || isRunning => Running with{
+                print("Running")
+            };
         end
         state Running
-            undefinedEvent => Idle;
+            stop => Idle with{
+                print("Stop")
+            };
         end
         `;
         const model = await parse(input, { validation: true });
-        expect(model.diagnostics?.length).toBeGreaterThanOrEqual(1);  // Expecting validation error for undefined event
+        expect(model.diagnostics).toHaveLength(2);
+    });
+
+    test('Invalid statemachine with an invalid assignment', async () => {
+        const input = `
+        statemachine InvalidAssignment
+        events
+            start stop
+        attributes
+            count: int = 23
+            isRunning: bool = false
+        initialState Idle
+        state Idle
+            start => Running with{
+                isRunning = count + 7
+            };
+        end
+        state Running
+            stop => Idle;
+        end`;
+        const model = await parse(input, { validation: true });
+        expect(model.diagnostics).toHaveLength(1);  // Expecting validation error for undefined event
+    });
+
+    test('Invalid state machine with an out-of-scope attribute access (undefined reference)', async () => {
+        const input = `
+        statemachine ReferenceUndefined
+        events
+            start stop
+        attributes
+            count: int = steps + 1
+            steps: int = 0
+            isRunning: bool = false
+        initialState Idle
+        state Idle
+            start when !isRunning => Running with{
+                print("Running")
+            };
+        end
+        state Running
+            stop => Idle with{
+                print("Stop")
+            };
+        end
+        `;
+        const model = await parse(input, { validation: true });
+        expect(model.diagnostics).toHaveLength(1);  // Expecting validation errors for undefined attribute
     });
 });

@@ -34,7 +34,7 @@ private:
     State* state = nullptr;
 public:
     int timeElapsedInSec = 0;
-    bool isNightMode = false;
+    bool isNightMode;
     TrafficLight(State* initial_state) {
         initial_state->set_context(this);
         state = initial_state;
@@ -90,11 +90,11 @@ public:
 
     void RedLight::switchMode() {
         if (true) {
-            statemachine->isNightMode = true;
-            std::cout << "Switching to night mode." << std::endl;
+            // statemachine->isNightMode = true;
+            std::cout << "Switching to night mode." <<statemachine->isNightMode<< std::endl;
             statemachine->transition_to(new NightMode);
         } else {
-            std::cout << "Transition not allowed." << std::endl;
+            std::cout << "Transition not allowed." << statemachine->isNightMode<< std::endl;
         }
     }
     
@@ -116,7 +116,7 @@ public:
     // GreenLight
 
     void GreenLight::next() {
-        if (((statemachine->timeElapsedInSec >= 5))) {
+        if ((((statemachine->timeElapsedInSec >= 5) || statemachine->isNightMode))) {
 
             std::cout << "Delaying transition for 6000 milliseconds..." << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(6000));
@@ -132,7 +132,7 @@ public:
 
     void GreenLight::switchMode() {
         if (true) {
-            statemachine->isNightMode = true;
+            // statemachine->isNightMode = true;
             std::cout << "Switching to night mode." << std::endl;
             statemachine->transition_to(new NightMode);
         } else {
@@ -143,7 +143,7 @@ public:
     // YellowLight
 
     void YellowLight::next() {
-        if (((statemachine->timeElapsedInSec >= 5))) {
+        if (true) {
 
             std::cout << "Delaying transition for 3000 milliseconds..." << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(3000));
@@ -159,7 +159,7 @@ public:
 
     void YellowLight::switchMode() {
         if (true) {
-            statemachine->isNightMode = true;
+            // statemachine->isNightMode = true;
             std::cout << "Switching to night mode." << std::endl;
             statemachine->transition_to(new NightMode);
         } else {
@@ -172,7 +172,7 @@ public:
     void NightMode::next() {
         if (true) {
             statemachine->timeElapsedInSec = 0;
-            statemachine->isNightMode = false;
+            // statemachine->isNightMode = false;
             std::cout << "Exiting night mode. Switching to Red Light." << std::endl;
             statemachine->transition_to(new RedLight);
         } else {

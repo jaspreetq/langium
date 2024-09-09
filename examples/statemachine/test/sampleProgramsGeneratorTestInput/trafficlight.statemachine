@@ -6,7 +6,7 @@ events
 
 attributes
     timeElapsedInSec : int = 0
-    isNightMode : bool = true
+    isNightMode : bool = false
 
 initialState RedLight
 

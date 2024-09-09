@@ -1,0 +1,48 @@
+statemachine HomeSecurity
+
+events
+    resetSystem
+    disarmSystem
+    triggerAlarm
+
+commands
+    notifyAuthorities
+
+attributes
+    systemArmed : bool = false
+    attempts : int = 0
+    maxAttempts : int = 3
+
+initialState Disarmed
+
+state Disarmed
+    triggerAlarm => AlarmTriggered
+    with{
+        systemArmed = true
+        attempts = 0
+        print("Alarm triggered! System armed.")
+    };
+end
+
+state AlarmTriggered
+    resetSystem when (attempts < maxAttempts) => AlarmTriggered
+    with{
+        attempts = attempts + 1
+        print("Reset attempt: ", attempts)
+    };
+
+    disarmSystem => Disarmed
+    with{
+        systemArmed = false
+        print("System disarmed.")
+    };
+end
+
+state Locked
+    // Once locked, no more reset attempts are allowed.
+    disarmSystem => Disarmed
+    with{
+        systemArmed = false
+        print("System disarmed from locked state.")
+    };
+end

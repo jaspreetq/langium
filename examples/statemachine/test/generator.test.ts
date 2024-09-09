@@ -14,8 +14,9 @@ import { normalizeCode } from './util.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const examplesDir = path.resolve(__dirname, '../example');
-const expectedOutputDir = path.resolve(__dirname, '../test/generatorTestFiles');
+/* New Code by @jaspreetq ***************************/
+const examplesDir = path.resolve(__dirname, '../test/sampleProgramsGeneratorTestInput');
+const expectedOutputDir = path.resolve(__dirname, '../test/sampleProgramsGeneratorTestExpectedOutput');
 
 function readExampleFile(fileName: string, dir: string): string {
     return fs.readFileSync(path.join(dir, fileName), 'utf-8');
@@ -28,8 +29,9 @@ const testCases = [
     { inputFile: 'vendingmachine.statemachine', expectedOutputFile: 'vendingmachine.cpp' },
     { inputFile: 'homeautomation.statemachine', expectedOutputFile: 'homeautomation.cpp' }
 ];
-
+/********************************************/
 describe('Tests the code generator', () => {
+    /* Old Code by @Eclipse-Langium Team ***********************/
     const services = createStatemachineServices(EmptyFileSystem).statemachine;
     const parse = parseHelper<Statemachine>(services);
 
@@ -47,11 +49,14 @@ describe('Tests the code generator', () => {
             });
 
             const text = toString(generated);
+            /********************************************/
 
+            /* New Changes by @jaspreetq ***************************/
             const normalizedText = normalizeCode(text);
             const normalizedExpectedOutput = normalizeCode(expectedOutput);
 
             expect(normalizedText).toBe(normalizedExpectedOutput);
+            /****************************************/
         });
     });
 });

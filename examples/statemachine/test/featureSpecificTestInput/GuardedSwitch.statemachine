@@ -1,0 +1,26 @@
+statemachine GuardedSwitch
+events
+    toggle
+    reset
+attributes
+    count: int = 0
+    isOn: bool = false
+    isActive: bool = true
+initialState Off
+state Off
+    toggle when(count < 3) => On with{
+        isOn = true
+        count = count + 1
+    };
+end
+state On
+    toggle => Off with{
+        isOn = false
+        count = count * 2
+    };
+    reset => Off with{
+        isOn = false
+        count = 0
+        isActive = false
+    };
+end

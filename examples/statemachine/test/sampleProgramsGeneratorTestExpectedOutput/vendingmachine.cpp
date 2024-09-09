@@ -43,7 +43,7 @@ private:
 public:
     int balance = 0;
     bool itemSelected = (false || (balance < 0));
-    int itemPrice = 50;
+    int itemPrice = 10;
     int stock = 10;
     VendingMachine(State* initial_state) {
         initial_state->set_context(this);

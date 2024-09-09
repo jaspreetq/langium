@@ -20,29 +20,25 @@ export function eventsAreValid(model: Statemachine, eventNames: string[]): boole
     return true;
 }
 
-export function inferType(e: Expression, env: StatemachineEnv, rootAttributeName?: string): string {
+export function inferType(e: Expression, env: StatemachineEnv, rootAssignableName?: string): string {
     if (isLiteral(e)) {
-        // type other than int or bool is not supported by the langium grammar itself 
-        // which is why we can safely assume that the type is either int or bool
         return typeof e.val === 'boolean' ? 'bool' : 'int';
     } else if (isRef(e)) {
-        // Write code to throw an error if the reference is not defined in the current scope, throw an error i.e.
-        const attributeIndex = attributeNames.indexOf(rootAttributeName ?? '');
+        // This throws an error if the reference is not defined in the current scope
+        const attributeIndex = attributeNames.indexOf(rootAssignableName ?? '');
         const refIndex = attributeNames.indexOf(e.val.$refText);
-        if (attributeIndex !== -1 && rootAttributeName) {
-            // console.log('refIndex', refIndex, 'attributeIndex', attributeIndex);
-            // console.log(attributeNames);
+        if (attributeIndex !== -1 && rootAssignableName) {
             if (refIndex >= attributeIndex) {
                 throw new Error(`${e.val.$refText} Reference is undefined in this scope`);
             }
         }
-        if (!e.val.ref || !env.has(e.val.$refText) || (e.val.$refText === rootAttributeName)) {
+        if (!e.val.ref || !env.has(e.val.$refText) || (e.val.$refText === rootAssignableName)) {
             throw new Error(`${e.val.$refText} Reference is undefined in this scope`);
         }
         return e.val.ref?.type;
     } else if (isBinExpr(e) && e?.$type === 'BinExpr') {
-        const leftType = inferType(e.e1, env, rootAttributeName);
-        const rightType = inferType(e.e2, env, rootAttributeName);
+        const leftType = inferType(e.e1, env, rootAssignableName);
+        const rightType = inferType(e.e2, env, rootAssignableName);
         if (leftType !== rightType) {
             throw new Error(`Type mismatch: ${leftType} ${e.op} ${rightType}`);
         }
@@ -85,20 +81,20 @@ export function inferType(e: Expression, env: StatemachineEnv, rootAttributeName
         }
     } else if (isNegExpr(e)) {
         if (isNegIntExpr(e)) {
-            const exprType = inferType(e.ne, env, rootAttributeName);
+            const exprType = inferType(e.ne, env, rootAssignableName);
             if (exprType !== 'int') {
                 throw new Error(`Invalid type for integer negation: ${exprType}`);
             }
             return 'int';
         } else if (isNegBoolExpr(e)) {
-            const exprType = inferType(e.ne, env, rootAttributeName);
+            const exprType = inferType(e.ne, env, rootAssignableName);
             if (exprType !== 'bool') {
                 throw new Error(`Invalid type for boolean negation: ${exprType}`);
             }
             return 'bool';
         }
     } else if (isGroup(e)) {
-        return inferType(e.ge, env, rootAttributeName);
+        return inferType(e.ge, env, rootAssignableName);
     }
     throw new Error(chalk.red('Unhandled Expression: ' + e));
 }

@@ -1,0 +1,20 @@
+statemachine LightSwitch
+events
+    toggle
+
+attributes
+    isOn: bool = false
+
+initialState Off
+
+state Off
+    toggle => On with{
+        isOn = true
+    };
+end
+
+state On
+    toggle => Off with{
+        isOn = false
+    };
+end

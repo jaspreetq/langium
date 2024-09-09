@@ -1,0 +1,65 @@
+statemachine HomeAutomation
+
+events 
+    motionDetected
+    noMotion
+    lightOn
+    lightOff
+    temperatureRise
+    temperatureDrop
+commands
+    turnOnLights
+    turnOffLights
+    startHeating
+    stopHeating
+
+attributes
+    isMotionDetected : bool = false
+    isLightOn : bool = false
+    currentTemperature : int = 22
+    targetTemperature : int = 24
+
+initialState Idle
+
+state Idle
+    motionDetected => MotionDetected;
+    noMotion => Idle;
+    temperatureRise => Heating;
+    temperatureDrop => Idle
+    with{
+        print("System is Idle, Motion: ", isMotionDetected)
+    };
+end
+
+state MotionDetected
+    motionDetected when isMotionDetected => Idle;
+    lightOn => LightOn
+    with{
+        print("Lights are ON, Motion: ", isMotionDetected)
+    };
+    lightOff => Idle;
+    temperatureRise => Heating;
+    temperatureDrop => Idle
+    with{
+        print("Motion Detected, turning on lights")
+        run turnOnLights
+    };
+end
+
+state LightOn
+    noMotion => Idle;
+    lightOff => Idle;
+    temperatureRise => Heating;
+    temperatureDrop => Idle;
+end
+
+state Heating
+    temperatureDrop when currentTemperature < targetTemperature => Idle;
+    temperatureRise => Heating;
+    lightOn => LightOn;
+    lightOff => Idle
+    with{
+        print("Heating the home, Current Temperature: ", currentTemperature)
+        run startHeating
+    };
+end

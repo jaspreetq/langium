@@ -1,0 +1,22 @@
+statemachine BooleanSwitch
+events
+    toggle
+attributes
+    count: int = 0
+    isOn: bool = false
+    isActive: bool = true
+initialState Off
+state Off
+    toggle => On with{
+        isOn = true
+        count = count + 1
+        isActive = isOn && (count > 0)
+    };
+end
+state On
+    toggle => Off with{
+        isOn = false
+        count = count * 2
+        isActive = isOn || (count < 5)
+    };
+end

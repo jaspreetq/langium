@@ -47,7 +47,7 @@ function generate(ctx: GeneratorContext): string {
 function joinWithExtraNL<T>(content: T[], toString: (e: T) => Generated): Generated {
     return join(content, toString, { appendNewLineIfNotEmpty: true });
 }
-
+// gen function
 export function generateCppContent(ctx: GeneratorContext): Generated {
     return toNode`
         #include <iostream>

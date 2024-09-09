@@ -10,7 +10,7 @@ import * as fs from 'node:fs';
 import { afterAll, describe, expect, test } from 'vitest';
 import { exec } from 'child_process';
 
-describe('Test the statemachine CLI', () => {
+describe('Test the statemachine CLI with trafficlight', () => {
     let fullPath: string;
     let fileName = path.join(__dirname, '../example/trafficlight.statemachine');
     const destination = 'statemachine-example-test';
@@ -41,6 +41,63 @@ describe('Test the statemachine CLI', () => {
 
 });
 
+describe('Test the statemachine CLI with vendingmachine', () => {
+    const vendingMachineFile = path.join(__dirname, '../example/vendingmachine.statemachine');
+    const destination = 'vendingmachine-example-test';
+    test('Generator command returns code 0 and creates expected files', async () => {
+        const result = await cli(['generate', vendingMachineFile, '-d', destination]);
+        expect(result.code).toBe(0);
+
+        const fileName = vendingMachineFile.replace(/\..*$/, '').replace(/[.-]/g, '');
+        const fullPath = path.join(destination, `${path.basename(fileName)}.cpp`);
+        const generatedDirExists = fs.existsSync(fullPath);
+        expect(generatedDirExists).toBe(true);
+    });
+
+    /* New Changes by @jaspreetq ***************************/
+    test('Interpret-static command returns code 0 and produces expected output', async () => {
+        const events = `'insertCoin' 'selectProduct'`; // Example events array
+        const result = await cli(['interpret-static', vendingMachineFile, events]);
+        console.log(result.stdout, result.stderr, result.error);
+        expect(result.code).toBe(0);
+        // Add additional assertions to verify the output if needed
+    });
+
+    afterAll(() => {
+        if (fs.existsSync(destination)) {
+            fs.rmdirSync(destination, { recursive: true });
+        }
+    });
+});
+
+describe('Test the statemachine CLI with smartthermostat', () => {
+    const smartthermostatFile = path.join(__dirname, '../example/smartthermostat.statemachine');
+    const destination = 'smartthermostat-example-test';
+
+    test('Generator command returns code 0 and creates expected files', async () => {
+        const result = await cli(['generate', smartthermostatFile, '-d', destination]);
+        expect(result.code).toBe(0);
+
+        const fileName = smartthermostatFile.replace(/\..*$/, '').replace(/[.-]/g, '');
+        const fullPath = path.join(destination, `${path.basename(fileName)}.cpp`);
+        const generatedDirExists = fs.existsSync(fullPath);
+        expect(generatedDirExists).toBe(true);
+    });
+    /* New Changes by @jaspreetq ***************************/
+    test('Interpret-static command returns code 0 and produces expected output', async () => {
+        const events = `'insertCoin' 'selectProduct'`; // Example events array
+        const result = await cli(['interpret-static', smartthermostatFile, events]);
+        console.log(result.stdout, result.stderr, result.error);
+        expect(result.code).toBe(0);
+        // Add additional assertions to verify the output if needed
+    });
+
+    afterAll(() => {
+        if (fs.existsSync(destination)) {
+            fs.rmdirSync(destination, { recursive: true });
+        }
+    });
+});
 interface CliResult {
     code: number,
     error: ExecException | null,

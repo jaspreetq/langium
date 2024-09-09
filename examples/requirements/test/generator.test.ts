@@ -15,7 +15,7 @@ describe('The generator should allow to extract all test cases referencing a spe
     test('T005_generator', async () => {
         // load model
         const services = createRequirementsAndTestsLangServices(NodeFileSystem);
-        const [requirementModel, testModels]  = await extractRequirementModelWithTestModels(
+        const [requirementModel, testModels] = await extractRequirementModelWithTestModels(
             path.join(__dirname, 'files', 'good', 'requirements.req'),
             services.requirements
         );
@@ -26,10 +26,10 @@ describe('The generator should allow to extract all test cases referencing a spe
         expect(table).toBeDefined();
         if (!table) throw new Error('unexpected');
         expect(table.length).toBe(2);
-        const rows = table[1].replace(/[\n\r]/g,' ').split('</TR>');
+        const rows = table[1].replace(/[\n\r]/g, ' ').split('</TR>');
         const relevantRows = rows.slice(
             1, // delete last part (after last </TR>)
-            rows.length-1 // delete first part (heading)
+            rows.length - 1 // delete first part (heading)
         );
 
         expect(relevantRows.length).toBe(4);

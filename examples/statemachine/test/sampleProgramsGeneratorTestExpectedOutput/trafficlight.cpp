@@ -116,7 +116,7 @@ public:
     // GreenLight
 
     void GreenLight::next() {
-        if (((statemachine->timeElapsedInSec >= 5))) {
+        if ((((statemachine->timeElapsedInSec >= 5) || statemachine->isNightMode))) {
 
             std::cout << "Delaying transition for 6000 milliseconds..." << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(6000));
@@ -143,7 +143,7 @@ public:
     // YellowLight
 
     void YellowLight::next() {
-        if (((statemachine->timeElapsedInSec >= 5))) {
+        if (true) {
 
             std::cout << "Delaying transition for 3000 milliseconds..." << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(3000));

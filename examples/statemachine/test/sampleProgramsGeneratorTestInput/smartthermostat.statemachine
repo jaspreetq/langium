@@ -1,0 +1,107 @@
+statemachine SmartThermostat
+
+events
+    increaseTemperature
+    decreaseTemperature
+    setMode
+    reset
+
+commands
+    notifyUser
+
+attributes
+    currentTemperature : int = 22
+    targetTemperature : int = 24
+    heatingEnabled : bool = false
+    coolingEnabled : bool = false
+    safetyThreshold : int = 30
+    energySavingMode : bool = false
+
+initialState Idle
+
+state Idle
+    increaseTemperature => AdjustingTemperature
+    with{
+        targetTemperature = targetTemperature + 2
+        print("Increasing target temperature to ", targetTemperature)
+    };
+
+    decreaseTemperature => AdjustingTemperature
+    with{
+        targetTemperature = targetTemperature - 2
+        print("Decreasing target temperature to ", targetTemperature)
+    };
+
+    setMode when (targetTemperature > safetyThreshold) => SafetyLock
+    with{
+        run notifyUser
+        print("Temperature exceeds safety threshold! Locking system.")
+    };
+
+    setMode when (targetTemperature <= safetyThreshold) => AdjustingTemperature
+    with{
+        heatingEnabled = (currentTemperature < targetTemperature)
+        coolingEnabled = (currentTemperature > targetTemperature)
+        energySavingMode = false
+        print("Adjusting system mode. Heating: ", heatingEnabled, ", Cooling: ", coolingEnabled)
+    };
+end
+
+state AdjustingTemperature
+    reset => Idle
+    with{
+        heatingEnabled = false
+        coolingEnabled = false
+        print("Resetting to idle mode.")
+    };
+
+    increaseTemperature => AdjustingTemperature
+    with{
+        targetTemperature = targetTemperature + 1
+        heatingEnabled = (currentTemperature < targetTemperature)
+        coolingEnabled = (currentTemperature > targetTemperature)
+        print("Target temperature increased to ", targetTemperature, ". Heating: ", heatingEnabled, ", Cooling: ", coolingEnabled)
+    };
+
+    decreaseTemperature => AdjustingTemperature
+    with{
+        targetTemperature = targetTemperature - 1
+        heatingEnabled = (currentTemperature < targetTemperature)
+        coolingEnabled = (currentTemperature > targetTemperature)
+        print("Target temperature decreased to ", targetTemperature, ". Heating: ", heatingEnabled, ", Cooling: ", coolingEnabled)
+    };
+
+    setMode when (energySavingMode) => EnergySavingMode
+    with{
+        print("Switching to energy-saving mode.")
+    };
+end
+
+state SafetyLock
+    reset => Idle
+    with{
+        heatingEnabled = false
+        coolingEnabled = false
+        print("Safety lock reset. Returning to idle mode.")
+    };
+end
+
+state EnergySavingMode
+    reset => Idle
+    with{
+        energySavingMode = false
+        print("Energy-saving mode disabled. Returning to idle mode.")
+    };
+
+    increaseTemperature => EnergySavingMode
+    with{
+        targetTemperature = targetTemperature + 1
+        print("Increased temperature in energy-saving mode to ", targetTemperature)
+    };
+
+    decreaseTemperature => EnergySavingMode
+    with{
+        targetTemperature = targetTemperature - 1
+        print("Decreased temperature in energy-saving mode to ", targetTemperature)
+    };
+end

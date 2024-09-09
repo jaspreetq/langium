@@ -16,7 +16,6 @@ Command:
 
 State:
     'state' name=ID
-        // ('actions' '{' actions+=Action+ '}')?
         transitions+=Transition*
     'end';
 
@@ -25,11 +24,7 @@ Transition:
     ('when' guard=Expression)? '=>' state=[State] 
     ('with{'
          actions+=Action+
-        //  (InTransitionEventCall)'()'?
     '}')? ';' ;
-
-// InTransitionEventCall:
-//     event=[Event:ID];
 
 Action:
     assignment=Assignment | print=PrintStatement | ('run' command=[Command]) | setTimeout=SetTimeout;
@@ -60,7 +55,16 @@ Conditional infers Expression:
     Comparison ({infer BinExpr.e1=current} op=('||' | '&&') e2=Comparison)*;
 
 Comparison infers Expression:
-    PrimaryExpr ({infer BinExpr.e1=current} op=('<=' | '<' | '>=' | '>' | '==' | '!=' | '+' | '-' | '*'| '/') e2=PrimaryExpr)*;
+    Equality ({infer BinExpr.e1=current} op=('<' | '<=' | '>' | '>=' ) e2=Equality)*;
+
+Equality infers Expression:
+    Add ({infer BinExpr.e1=current} op=('==' | '!=') e2=Add)*;
+
+Add infers Expression:
+    Mult ({infer BinExpr.e1=current} op=('+' | '-' ) e2=Mult)*;
+
+Mult infers Expression:
+    PrimaryExpr ({infer BinExpr.e1=current} op=('*' | '/' ) e2=PrimaryExpr)*;
 
 PrimaryExpr:
     Literal | Ref | Group | NegExpr;

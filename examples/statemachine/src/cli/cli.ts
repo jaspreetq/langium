@@ -26,6 +26,7 @@ export const interpret = async (fileName: string): Promise<void> => {
     interpretStatemachine(model);
 };
 
+/*by @Eclipse-Langium */
 export const interpretStatic = async (fileName: string, events: string[]): Promise<void> => {
     const services = createStatemachineServices(NodeFileSystem).statemachine;
     const model = await extractAstNode<Statemachine>(fileName, StatemachineLanguageMetaData.fileExtensions, services);
@@ -33,6 +34,7 @@ export const interpretStatic = async (fileName: string, events: string[]): Promi
     await interpretStatemachineStatic(model, events);
 };
 
+/*by @Eclipse-Langium */
 export const generateAction = async (fileName: string, opts: GenerateOptions): Promise<void> => {
     const services = createStatemachineServices(NodeFileSystem).statemachine;
     const statemachine = await extractAstNode<Statemachine>(fileName, StatemachineLanguageMetaData.fileExtensions, services);
