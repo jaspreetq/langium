@@ -6,7 +6,7 @@
  ******************************************************************************/
 
 import type { ValidationAcceptor, ValidationChecks } from 'langium';
-import { type State, type Statemachine, type StatemachineAstType, type Event, type Attribute, Assignment, Expression, PrintStatement, isStringLiteral, Transition } from './generated/ast.js';
+import { type State, type Statemachine, type StatemachineAstType, type Event, type Attribute, Assignment, PrintStatement, isStringLiteral, Transition } from './generated/ast.js';
 import type { StatemachineServices } from './statemachine-module.js';
 import { MultiMap } from 'langium';
 import { getDefaultAttributeValue, evalExpression, inferType } from '../cli/interpret-util.js';
@@ -22,7 +22,7 @@ export function registerValidationChecks(services: StatemachineServices) {
         Statemachine: validator.checkUniqueStatesEventsAndAttributes,
         // Attribute: validator.checkAttribute,
         Assignment: validator.checkAssignment,
-        Expression: validator.checkExpression,
+        // Expression: validator.checkExpression,
         PrintStatement: validator.checkPrintStatement,
         Transition: validator.checkTransition,
 
@@ -129,13 +129,13 @@ export class StatemachineValidator {
         }
     }
 
-    checkExpression(expression: Expression, accept: ValidationAcceptor): void {
-        try {
-            inferType(expression, env);
-        } catch (error) {
-            accept('error', ` In Expression: ${(error as Error).message}`, { node: expression, property: 'value' });
-        }
-    }
+    // checkExpression(expression: Expression, accept: ValidationAcceptor): void {
+    //     try {
+    //         inferType(expression, env);
+    //     } catch (error) {
+    //         accept('error', ` In Expression: ${(error as Error).message}`, { node: expression, property: 'value' });
+    //     }
+    // }
 
     checkPrintStatement(printStatement: PrintStatement, accept: ValidationAcceptor): void {
         for (const value of printStatement.values) {
