@@ -44,7 +44,6 @@ async function executeAction(action: Action, context: ExecutionContext): Promise
     }
 }
 
-
 async function executeTransition(transition: Transition, context: ExecutionContext): Promise<void> {
     const guardExpression = (transition.guard && evalExpression(transition.guard, context.env)) ?? true;
     if (transition.guard && typeof guardExpression !== 'boolean') {

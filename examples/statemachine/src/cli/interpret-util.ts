@@ -22,6 +22,9 @@ export function eventsAreValid(model: Statemachine, eventNames: string[]): boole
 
 export function inferType(e: Expression, env: StatemachineEnv, rootAssignableName?: string): string {
     if (isLiteral(e)) {
+        if (typeof e.val === 'undefined') {
+            throw new Error('Literal value is undefined');
+        }
         return typeof e.val === 'boolean' ? 'bool' : 'int';
     } else if (isRef(e)) {
         // This throws an error if the reference is not defined in the current scope
@@ -35,6 +38,7 @@ export function inferType(e: Expression, env: StatemachineEnv, rootAssignableNam
         if (!e.val.ref || !env.has(e.val.$refText) || (e.val.$refText === rootAssignableName)) {
             throw new Error(`${e.val.$refText} Reference is undefined in this scope`);
         }
+        evalExpression(e, env);
         return e.val.ref?.type;
     } else if (isBinExpr(e) && e?.$type === 'BinExpr') {
         const leftType = inferType(e.e1, env, rootAssignableName);
@@ -101,6 +105,8 @@ export function inferType(e: Expression, env: StatemachineEnv, rootAssignableNam
 
 export function evalExpression(e: Expression, env: StatemachineEnv): number | boolean {
     if (isLiteral(e)) {
+        if (e.val === undefined)
+            throw new Error('Literal value is undefined');
         return e.val;
     } else if (isRef(e)) {
         const refName = e.val.ref?.name;

@@ -9,8 +9,8 @@ commands
     testCommand
 
 attributes
+    cnt : int = 23 + a
     a: int = 4
-    cnt : int
     isEmpty : bool = (12 == cnt || cnt > 0) && cnt < 100
     isOut : bool = true == false || !isEmpty
     checkDefault: bool = true == isEmpty
@@ -22,17 +22,17 @@ state PowerOff
     with{
         setTimeout(6000)
         run testCommand
-        print(cnt," An Expression with /0 :", isEmpty && (23 < (cnt + cnt/(cnt - cnt + 1) + 1)), cnt * 23 - 24)
+        print(cnt," An Expression with /0 :", isEmpty && (23 < (cnt + cnt/(cnt - cnt + 1 - 2/2) + 1)), cnt * 23 - 24)
         print(isOut)
     };
 end
 
 state RedLight
-    switchCapacity when (12+32*30 > cnt) => PowerOff 
+    switchCapacity when (isEmpty) => PowerOff 
     with{
         run testCommand
-        print(cnt > 10)
-        cnt = cnt + 1 + 20*(cnt+1)
+        print("cnt: ", cnt - b)
+         // cnt: int, isEmpty: bool
         print(cnt)
         print( cnt + cnt/(cnt - cnt +1) + 1)
     };

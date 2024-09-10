@@ -32,12 +32,6 @@ state Idle
         print("Decreasing target temperature to ", targetTemperature)
     };
 
-    setMode when (targetTemperature > safetyThreshold) => SafetyLock
-    with{
-        run notifyUser
-        print("Temperature exceeds safety threshold! Locking system.")
-    };
-
     setMode when (targetTemperature <= safetyThreshold) => AdjustingTemperature
     with{
         heatingEnabled = (currentTemperature < targetTemperature)

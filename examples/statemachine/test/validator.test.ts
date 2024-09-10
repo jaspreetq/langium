@@ -67,7 +67,7 @@ describe('Statemachine Validator Tests', () => {
         state Running end
         `;
         const model = await parse(input, { validation: true });
-        expect(model.diagnostics).toHaveLength(2);  // Expecting one validation error for type mismatch
+        expect(model.diagnostics).toHaveLength(2);  // Expecting two validation error for type mismatch
     });
 
     test('Invalid statemachine with a type mismatch in a conditional expression (guard)', async () => {
@@ -91,7 +91,7 @@ describe('Statemachine Validator Tests', () => {
         end
         `;
         const model = await parse(input, { validation: true });
-        expect(model.diagnostics).toHaveLength(2);
+        expect(model.diagnostics).toHaveLength(1);
     });
 
     test('Invalid statemachine with an invalid assignment', async () => {

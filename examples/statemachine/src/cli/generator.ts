@@ -11,7 +11,7 @@ import { type Generated, expandToNode as toNode, joinToNode as join, toString } 
 import { Action, Attribute, Expression, isBinExpr, isRef, isStringLiteral, Transition, type State, type Statemachine } from '../language-server/generated/ast.js';
 import { extractDestinationAndName } from './cli-util.js';
 import { env, StatemachineEnv } from './interpreter.js';
-import { getDefaultAttributeValue, evalExpression } from './interpret-util.js';
+import { evalExpression } from './interpret-util.js';
 import { isNegExpr, isLiteral, isNegIntExpr, isNegBoolExpr, isGroup } from "../language-server/generated/ast.js";
 import chalk from 'chalk';
 
@@ -146,16 +146,16 @@ function generateStateDeclaration(ctx: GeneratorContext, state: State): Generate
 }
 
 function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv): Generated {
-    const defaultValue = getDefaultAttributeValue(attribute);
+    // const defaultValue = getDefaultAttributeValue(attribute);
 
     if (attribute.type !== 'int' && attribute.type !== 'bool') {
         throw new Error(`Unsupported attribute type: ${attribute.type}`);
     }
 
     if (attribute.defaultValue === undefined) {
-        env.set(attribute.name, defaultValue);
+        env.set(attribute.name, undefined);
         return toNode`
-                        ${attribute.type} ${attribute.name} = ${defaultValue};
+                        ${attribute.type} ${attribute.name};
             `;
     }
 
@@ -166,7 +166,6 @@ function generateAttributeDeclaration(attribute: Attribute, env: StatemachineEnv
                     ${attribute.type} ${attribute.name} = ${defaultValueString};
         `;
 }
-
 
 function generateAction(action: Action, env: StatemachineEnv): string {
     if (action.setTimeout) {
@@ -225,6 +224,9 @@ function generateStateDefinition(ctx: GeneratorContext, state: State, env: State
 
 function convertExpressionToString(e: Expression, env: StatemachineEnv, refPrefix: string): string {
     if (isLiteral(e)) {
+        if (e.val === undefined) {
+            throw new Error('Literal value is undefined');
+        }
         return e.val.toString();
     } else if (isRef(e)) {
         // Write code to throw an error if the reference is not defined in the current scope, throw an error i.e.

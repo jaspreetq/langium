@@ -87,7 +87,6 @@ public:
     void increaseTemperature() override;
     void decreaseTemperature() override;
     void setMode() override;
-    void setMode() override;
 };
 class AdjustingTemperature : public State {
 public:
@@ -127,17 +126,6 @@ public:
             statemachine->targetTemperature = (statemachine->targetTemperature - 2);
             std::cout << "Decreasing target temperature to " << statemachine->targetTemperature << std::endl;
             statemachine->transition_to(new AdjustingTemperature);
-        } else {
-            std::cout << "Transition not allowed." << std::endl;
-        }
-    }
-    
-
-    void Idle::setMode() {
-        if (((statemachine->targetTemperature > statemachine->safetyThreshold))) {
-            std::cout << "Run Command: notifyUser()" << std::endl;
-            std::cout << "Temperature exceeds safety threshold! Locking system." << std::endl;
-            statemachine->transition_to(new SafetyLock);
         } else {
             std::cout << "Transition not allowed." << std::endl;
         }
